@@ -1,6 +1,8 @@
 from app import db
 from core.reports import ReportField, Report
 from core.user_interaction import UserInteraction
+from werkzeug.security import check_password_hash, generate_password_hash
+from flask_login import UserMixin
 
 
 class Country(db.Model):
@@ -15,6 +17,9 @@ class ExperienceLevel(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     experience = db.Column(db.String(60), unique=True)
+
+    def add_experience_level_to_db(self):
+        pass
 
 
 class Sex(db.Model):
@@ -31,7 +36,7 @@ class TypeOfInterests(db.Model):
     name = db.Column(db.String(50), index=True, nullable=False, unique=True)
 
 
-class AppUser(db.Model, ReportField):
+class AppUser(db.Model, ReportField, UserMixin):
     __tablename__ = "AppUser"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -52,6 +57,12 @@ class AppUser(db.Model, ReportField):
 
     def create_report(self):
         pass
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password=password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 
 user_interests = db.Table(
@@ -164,6 +175,7 @@ class GeoInformation(db.Model):
     country = db.Column(db.Integer, db.ForeignKey('Country.id'))
     language = db.Column(db.String(50))
     region = db.Column(db.String(50))
+
 
 
 class Attraction(db.Model):
