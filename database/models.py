@@ -5,37 +5,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
 
 
-class Country(db.Model):
-    __tablename__ = "Country"
-
-    id = db.Column(db.Integer, primary_key=True)
-    country = db.Column(db.String(60), unique=True)
-
-
-class ExperienceLevel(db.Model):
-    __tablename__ = "ExperienceLevel"
-
-    id = db.Column(db.Integer, primary_key=True)
-    experience = db.Column(db.String(60), unique=True)
-
-    def add_experience_level_to_db(self):
-        pass
-
-
-class Sex(db.Model):
-    __tablename__ = "Sex"
-
-    id = db.Column(db.Integer, primary_key=True)
-    sex = db.Column(db.String(7), unique=True)
-
-
-class TypeOfInterests(db.Model):
-    __tablename__ = "TypeOfInterests"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), index=True, nullable=False, unique=True)
-
-
 class AppUser(db.Model, ReportField, UserMixin):
     __tablename__ = "AppUser"
 
@@ -51,6 +20,10 @@ class AppUser(db.Model, ReportField, UserMixin):
         'polymorphic_identity': 'AppUser',
         'polymorphic_on': login
     }
+
+    def __init__(self, login, email):
+        self.login = login
+        self.email = email
 
     def __repr__(self):
         return f"user: {self.username}"
@@ -175,7 +148,6 @@ class GeoInformation(db.Model):
     country = db.Column(db.Integer, db.ForeignKey('Country.id'))
     language = db.Column(db.String(50))
     region = db.Column(db.String(50))
-
 
 
 class Attraction(db.Model):
@@ -390,3 +362,36 @@ class PlaceReport(db.Model, Report):
     def consider(self, settlement, place_admin_id):
         self.settlement = settlement
         self.place_admin_id = place_admin_id
+
+class Country(db.Model):
+    __tablename__ = "Country"
+
+    id = db.Column(db.Integer, primary_key=True)
+    country = db.Column(db.String(60), unique=True, nullable=False)
+
+
+class ExperienceLevel(db.Model):
+    __tablename__ = "ExperienceLevel"
+
+    id = db.Column(db.Integer, primary_key=True)
+    experience = db.Column(db.String(60), unique=True, nullable=False)
+
+    def add_experience_level_to_db(self):
+        pass
+
+
+class Sex(db.Model):
+    __tablename__ = "Sex"
+
+    id = db.Column(db.Integer, primary_key=True)
+    gender = db.Column(db.String(7), unique=True, nullable=False)
+
+
+class TypeOfInterests(db.Model):
+    __tablename__ = "TypeOfInterests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), index=True, nullable=False, unique=True)
+
+    def __init__(self, name):
+        self.name = name

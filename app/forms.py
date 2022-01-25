@@ -7,6 +7,7 @@ from wtforms import (
     SubmitField
 )
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length
+from database.models import AppUser
 
 
 class LoginForm(FlaskForm):
@@ -24,6 +25,16 @@ class RegisterForm(FlaskForm):
     password_2 = PasswordField("Repeat Password", validators=[DataRequired()])
     email = StringField("email", validators=[DataRequired(), Length(min=4, max=15)])
     submit = SubmitField("Enter User credentials")
+
+    def validate_username(self, username):
+        user = AppUser.query.filter_by(username=username.data).first()
+        if user is not None:
+            raise ValidationError('Please use a different username.')
+
+    def validate_email(self, email):
+        user = AppUser.query.filter_by(email=email.data).first()
+        if user is not None:
+            raise ValidationError('Please use a different email address.')
 
 
 class UserForm(FlaskForm):
