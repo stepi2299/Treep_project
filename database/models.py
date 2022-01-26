@@ -3,6 +3,8 @@ from core.reports import ReportField, Report
 from core.user_interaction import UserInteraction
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
+import datetime
+import pytz
 
 
 @login.user_loader
@@ -26,16 +28,19 @@ class AppUser(db.Model, ReportField, UserMixin):
         'polymorphic_on': login
     }
 
-    def __init__(self, login, email, personal_info_id):
-        self.login = login
-        self.email = email
-        self.personal_info_id = personal_info_id
-
     def __repr__(self):
         return f"user: {self.username}"
 
-    def create_report(self):
-        pass
+    def create_report(self, reporter_id, reason):
+        try:
+            report = UserReport(reporter_id=reporter_id, reason=reason,
+                                reported_id=self.id)
+            db.session.add(report)
+            db.session.commit()
+            return report
+        except:
+            db.session.rollback()
+            return False
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password=password)
@@ -43,11 +48,41 @@ class AppUser(db.Model, ReportField, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    def add_post(self):
-        pass
+    def add_post(self, text, photo_path, visit_id=None):
+        try:
+            post = Post(text=text, creation_date=datetime.date.today(),
+                        creator_id=self.id, visit_id=visit_id)
+            db.session.add(post)
+            db.session.commit()
+            photo = Photo(photo_path=photo_path, post_id=post.id)
+            db.session.add(post)
+            db.session.commit()
+            return post, photo
+        except:
+            db.session.rollback()
+            return False
 
-    def add_experience(self):
-        pass
+    def add_experience(self, experience_diff):
+        if self.experience >= experience_diff:
+            self.experience += experience_diff
+        else:
+            self.experience = 0
+        self.__update_level_experience()
+
+    def __update_level_experience(self):
+        if self.experience < 100:
+            self.experience_level_id = 1
+        elif 100 <= self.experience <= 200:
+            self.experience_level_id = 2
+        else:
+            self.experience_level_id = 3
+
+    def add_visit(self, place_id, hotel_id, transport_id):
+        try:
+            visit = Visit()
+        except:
+            db.session.rollback()
+            return False
 
 
 user_interests = db.Table(
@@ -211,7 +246,7 @@ class Weather(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     place_id = db.Column(db.Integer, db.ForeignKey('Place.id'))
     cloudiness = db.Column(db.Integer)  # possible string, check what values we will accept here
-    temperature = db.Column(db.Integer)
+    temperature = db.Column(db.Float)
     humidity = db.Column(db.Integer)
     date = db.Column(db.Date)
 
@@ -230,7 +265,7 @@ class Address(db.Model):
     city = db.Column(db.String(50), nullable=False)
     google_maps_link = db.Column(db.String(150))
     street = db.Column(db.String(100), nullable=False)
-    nr_of_street = db.Column(db.Integer)
+    nr_of_street = db.Column(db.String(10))
     nr_of_apartment = db.Column(db.Integer)
     postcode = db.Column(db.String(10))
 
@@ -303,19 +338,19 @@ class PostReport(db.Model, Report):
 
     id = db.Column(db.Integer, primary_key=True)
     moderator_id = db.Column(db.Integer, db.ForeignKey('Moderator.id'))
-    settlement = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
+    settlement_id = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
     reporter_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('Post.id'))
     reason = db.Column(db.String(200))
 
-    def __init__(self, reporter_id, reason, post_id, settlement=None, moderator_id=None):
-        super().__init__(reporter_id=reporter_id, reason=reason, settlement=settlement)
+    def __init__(self, reporter_id, reason, post_id, settlement_id=1, moderator_id=None):
+        super().__init__(reporter_id=reporter_id, reason=reason, settlement_id=settlement_id)
         self.moderator_id = moderator_id
         self.post_id = post_id
 
     # TODO
-    def consider(self, settlement, moderator_id):
-        self.settlement = settlement
+    def consider(self, settlement_id, moderator_id):
+        self.settlement_id = settlement_id
         self.moderator_id = moderator_id
 
 
@@ -324,19 +359,19 @@ class CommentReport(db.Model, Report):
 
     id = db.Column(db.Integer, primary_key=True)
     moderator_id = db.Column(db.Integer, db.ForeignKey('Moderator.id'))
-    settlement = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
+    settlement_id = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
     reporter_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
     comment_id = db.Column(db.Integer, db.ForeignKey('Comment.id'))
     reason = db.Column(db.String(200))
 
-    def __init__(self, reporter_id, reason, comment_id, settlement=None, moderator_id=None):
-        super().__init__(reporter_id=reporter_id, reason=reason, settlement=settlement)
+    def __init__(self, reporter_id, reason, comment_id, settlement_id=1, moderator_id=None):
+        super().__init__(reporter_id=reporter_id, reason=reason, settlement_id=settlement_id)
         self.moderator_id = moderator_id
         self.comment_id = comment_id
 
     # TODO
-    def consider(self, settlement, moderator_id):
-        self.settlement = settlement
+    def consider(self, settlement_id, moderator_id):
+        self.settlement_id = settlement_id
         self.moderator_id = moderator_id
 
 
@@ -344,20 +379,20 @@ class UserReport(db.Model, Report):
     __tablename__ = "UserReport"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_admin_id = db.Column(db.Integer, db.ForeignKey('UserAdmin.id'))
-    settlement = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
+    user_admin_id = db.Column(db.Integer, db.ForeignKey('UserAdmin.id'), default=None)
+    settlement_id = db.Column(db.Integer, db.ForeignKey('Settlement.id'), default=1)
     reporter_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
     reported_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
     reason = db.Column(db.String(200))
 
-    def __init__(self, reporter_id, reason, reported_id, settlement=None, user_admin_id=None):
-        super().__init__(reporter_id=reporter_id, reason=reason, settlement=settlement)
+    def __init__(self, reporter_id, reason, reported_id, settlement_id=1, user_admin_id=None):
+        super().__init__(reporter_id=reporter_id, reason=reason, settlement_id=settlement_id)
         self.user_admin_id = user_admin_id
         self.reported_id = reported_id
 
     # TODO
-    def consider(self, settlement, user_admin_id):
-        self.settlement = settlement
+    def consider(self, settlement_id, user_admin_id):
+        self.settlement_id = settlement_id
         self.user_admin_id = user_admin_id
 
 
@@ -366,13 +401,13 @@ class PlaceReport(db.Model, Report):
 
     id = db.Column(db.Integer, primary_key=True)
     place_admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'))
-    settlement = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
+    settlement_id = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
     reporter_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
     place_id = db.Column(db.Integer, db.ForeignKey('Place.id'))
     reason = db.Column(db.String(200))
 
-    def __init__(self, reporter_id, reason, place_id, settlement=None, place_admin_id=None):
-        super().__init__(reporter_id=reporter_id, reason=reason, settlement=settlement)
+    def __init__(self, reporter_id, reason, place_id, settlement_id=1, place_admin_id=None):
+        super().__init__(reporter_id=reporter_id, reason=reason, settlement_id=settlement_id)
         self.place_admin_id = place_admin_id
         self.place_id = place_id
 

@@ -6,7 +6,6 @@ from flask_login import current_user, login_user, logout_user, login_required
 from .forms import LoginForm, RegisterForm
 
 
-
 @flask_app.route('/')
 @flask_app.route('/index')
 def index():
