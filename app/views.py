@@ -1,14 +1,10 @@
-from app import flask_app, login
+from app import flask_app
 from database.models import AppUser
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.urls import url_parse
 from flask_login import current_user, login_user, logout_user, login_required
 from .forms import LoginForm, RegisterForm
 
-
-@login.user_loader
-def load_user(id):
-    return AppUser.query.get(int(id))
 
 
 @flask_app.route('/')

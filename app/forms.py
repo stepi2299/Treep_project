@@ -11,7 +11,6 @@ from wtforms import (
 )
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, NumberRange, URL
 from flask_wtf.file import FileField, FileAllowed, FileRequired
-from database.models import AppUser
 from app import photos
 
 

@@ -1,3 +1,4 @@
+from app import db
 from database.models import *
 import datetime
 
@@ -13,6 +14,7 @@ class DbWorker:
     def add_several_into_db(self, obj_list):
         db.session.add_all(obj_list)
         db.session.commit()
+
 
 db_work = DbWorker()
 
