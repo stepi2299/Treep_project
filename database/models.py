@@ -11,19 +11,20 @@ class AppUser(db.Model, ReportField, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     login = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
-    experience = db.Column(db.Integer)
-    experience_level_id = db.Column(db.Integer, db.ForeignKey('ExperienceLevel.id'))
+    experience = db.Column(db.Integer, default=0)
+    experience_level_id = db.Column(db.Integer, db.ForeignKey('ExperienceLevel.id'), default=1)
     personal_info_id = db.Column(db.Integer, db.ForeignKey('PersonalInfo.id'))
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(128), unique=True)
 
     __mapper_args__ = {
         'polymorphic_identity': 'AppUser',
         'polymorphic_on': login
     }
 
-    def __init__(self, login, email):
+    def __init__(self, login, email, personal_info_id):
         self.login = login
         self.email = email
+        self.personal_info_id = personal_info_id
 
     def __repr__(self):
         return f"user: {self.username}"
@@ -36,6 +37,12 @@ class AppUser(db.Model, ReportField, UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def add_post(self):
+        pass
+
+    def add_experience(self):
+        pass
 
 
 user_interests = db.Table(
@@ -52,7 +59,7 @@ class PersonalInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     city = db.Column(db.String(40), index=True)
     country_id = db.Column(db.Integer, db.ForeignKey('Country.id'))
-    name = db.Column(db.String(40))
+    name = db.Column(db.String(40), nullable=False)
     sex_id = db.Column(db.Integer, db.ForeignKey('Sex.id'))
     surname = db.Column(db.String(80))
 
@@ -82,11 +89,14 @@ class Post(db.Model, UserInteraction):
     visit_id = db.Column(db.Integer, db.ForeignKey('Visit.id'))
     creator_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
     creation_date = db.Column(db.DateTime)
-    text = db.Column(db.String(2000))
-    note = db.Column(db.Integer)
+    text = db.Column(db.String(2000), nullable=False)
+    note = db.Column(db.Integer, default=0)
 
-    def __init__(self, creator_id):
+    def __init__(self, creator_id, creation_date, text, visit_id):
         self.creator_id = creator_id
+        self.text = text
+        self.creation_date = creation_date
+        self.visit_id = visit_id
 
     def create_report(self):
         pass
@@ -98,7 +108,7 @@ class Comment(db.Model, UserInteraction):
     id = db.Column(db.Integer, primary_key=True)
     creator_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
     creation_date = db.Column(db.DateTime)
-    text = db.Column(db.String(500))
+    text = db.Column(db.String(200))
     given_note = db.Column(db.Integer)
 
     def create_report(self):
@@ -110,7 +120,7 @@ class Place(db.Model, ReportField):
 
     id = db.Column(db.Integer, primary_key=True)
     creation_date = db.Column(db.DateTime)
-    name = db.Column(db.String(40), index=True, unique=True)
+    name = db.Column(db.String(40), index=True, unique=True, nullable=False)
     geo_information_id = db.Column(db.Integer, db.ForeignKey('GeoInformation.id'))
 
     def __init__(self, place_admin):
@@ -262,6 +272,9 @@ class Visit(db.Model):
     end_date = db.Column(db.Date)
 
     def __init__(self):
+        pass
+
+    def add_post(self):
         pass
 
 

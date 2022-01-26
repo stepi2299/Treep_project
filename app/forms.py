@@ -4,10 +4,15 @@ from wtforms import (
     PasswordField,
     BooleanField,
     IntegerField,
-    SubmitField
+    SubmitField,
+    SelectField,
+    SelectMultipleField,
+    MultipleFileField
 )
-from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length
+from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, NumberRange, URL
+from flask_wtf.file import FileField, FileAllowed, FileRequired
 from database.models import AppUser
+from app import photos
 
 
 class LoginForm(FlaskForm):
@@ -23,7 +28,7 @@ class RegisterForm(FlaskForm):
         DataRequired(), Length(min=4, max=30),
         EqualTo('password_2', message="Passwords must match")])
     password_2 = PasswordField("Repeat Password", validators=[DataRequired()])
-    email = StringField("email", validators=[DataRequired(), Length(min=4, max=15)])
+    email = StringField("email", validators=[DataRequired(), Length(min=4, max=15), Email()])
     submit = SubmitField("Enter User credentials")
 
     def validate_username(self, username):
@@ -38,22 +43,34 @@ class RegisterForm(FlaskForm):
 
 
 class UserForm(FlaskForm):
-    age = IntegerField("Age")
+    age = IntegerField("Age", validators=[NumberRange(min=10, max=100)])
     city = StringField("City")
     country = StringField("Country")
-    name = StringField("Name")
-    sex = StringField("Sex")
+    name = StringField("Name", validators=[DataRequired()])
+    sex = StringField("Sex", SelectField('choose your Gender', choices=['Male', 'Female']))  # TODO take from db
     surname = StringField("Surname")
     submit = SubmitField("Enter User informations")
 
 
 class InterestsForm(FlaskForm):
-    business = BooleanField("Business")
-    culture = BooleanField("Culture")
-    entertainment = BooleanField("Entertainment")
-    fashion = BooleanField("Fashion")
-    gastronomy = BooleanField("Gastronomy")
-    nature = BooleanField("Nature")
-    sport = BooleanField("Sport")
-    extreme_sport = BooleanField("Extreme Sport")
-    water_sport = BooleanField("Water Sport")
+    # business = BooleanField("Business")
+    # culture = BooleanField("Culture")
+    # entertainment = BooleanField("Entertainment")
+    # fashion = BooleanField("Fashion")
+    # gastronomy = BooleanField("Gastronomy")
+    # nature = BooleanField("Nature")
+    # sport = BooleanField("Sport")
+    # extreme_sport = BooleanField("Extreme Sport")
+    # water_sport = BooleanField("Water Sport")
+    interests = SelectMultipleField() # TODO think how
+
+
+class PostForm(FlaskForm):
+    text = StringField("Describe your adventures", validators=[DataRequired(), Length(min=1, max=2000)])
+    photo = MultipleFileField("Photo of attraction",
+                      validators=[FileAllowed(photos, 'Image only!'), FileRequired('File was empty!')])
+
+
+class CommentForm(FlaskForm):
+    text = StringField("Describe your adventures", validators=[DataRequired(), Length(min=1, max=200)])
+    given_note = IntegerField("What is your note of post", NumberRange(min=-2, max=2))
