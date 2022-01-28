@@ -10,5 +10,5 @@ class UserInteraction(ReportField):
         self.creation_date = datetime.now(pytz.utc)
 
     @abstractmethod
-    def create_report(self):
+    def create_report(self, reporter_id, reason):
         pass

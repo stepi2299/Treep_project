@@ -12,6 +12,28 @@ def load_user(id):
     return AppUser.query.get(int(id))
 
 
+followers = db.Table('followers',
+    db.Column('follower_id', db.Integer, db.ForeignKey('AppUser.id')),
+    db.Column('followed_id', db.Integer, db.ForeignKey('AppUser.id'))
+)
+
+user_interests = db.Table(
+    'user_interests',
+    db.Column('user_id', db.Integer, db.ForeignKey('AppUser.id')),
+    db.Column('interest_id', db.Integer, db.ForeignKey('TypeOfInterests.id'))
+)
+
+
+class TypeOfInterests(db.Model):
+    __tablename__ = "TypeOfInterests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), index=True, nullable=False, unique=True)
+
+    def __init__(self, name):
+        self.name = name
+
+
 class AppUser(db.Model, ReportField, UserMixin):
     __tablename__ = "AppUser"
 
@@ -22,6 +44,17 @@ class AppUser(db.Model, ReportField, UserMixin):
     experience_level_id = db.Column(db.Integer, db.ForeignKey('ExperienceLevel.id'), default=1)
     personal_info_id = db.Column(db.Integer, db.ForeignKey('PersonalInfo.id'))
     password_hash = db.Column(db.String(128), unique=True)
+    followed = db.relationship(
+        'AppUser', secondary=followers,
+        primaryjoin=(followers.c.follower_id == id),
+        secondaryjoin=(followers.c.followed_id == id),
+        backref=db.backref('followers', lazy='dynamic'), lazy='dynamic')
+    interest = db.relationship(
+        'TypeOfInterests', secondary=user_interests,
+        primaryjoin=(user_interests.c.user_id == id),
+        secondaryjoin=(user_interests.c.interest_id == TypeOfInterests.id),
+        backref=db.backref('interest', lazy='dynamic'), lazy='dynamic')
+    profile_photo = db.Column(db.Integer, db.ForeignKey('ProfilePhoto.id'), default=1)
 
     __mapper_args__ = {
         'polymorphic_identity': 'AppUser',
@@ -77,20 +110,41 @@ class AppUser(db.Model, ReportField, UserMixin):
         else:
             self.experience_level_id = 3
 
-    def add_visit(self, place_id, hotel_id, transport_id):
+    def add_visit(self, place_id, hotel_id, transport_id, name, start_date, end_date):
         try:
-            visit = Visit()
+            visit = Visit(place_id=place_id,
+                          hotel_id=hotel_id,
+                          transport_id=transport_id,
+                          user_id=self.id,
+                          name=name,
+                          start_date=start_date,
+                          end_date=end_date)
+            db.session.add(visit)
+            db.session.commit()
+            return visit
         except:
             db.session.rollback()
             return False
 
+    def follow(self, user):
+        if not self.is_following(user):
+            self.followed.append(user)
 
-user_interests = db.Table(
-    'user_interests',
-    db.Column('user_id', db.Integer, db.ForeignKey('AppUser.id')),
-    db.Column('interest_id', db.Integer, db.ForeignKey('TypeOfInterests.id')),
-    db.PrimaryKeyConstraint('user_id', "interest_id", name='user_interest_id')
-)
+    def unfollow(self, user):
+        if self.is_following(user):
+            self.followed.remove(user)
+
+    def is_following(self, user):
+        return self.followed.filter(
+            followers.c.followed_id == user.id).count() > 0
+
+    def add_interest(self, type_of_interest):
+        if self.already_interest(type_of_interest):
+            self.interest.append(type_of_interest)
+
+    def already_interest(self, type_of_interest):
+        return self.interest.filter(
+            user_interests.c.interest_id == type_of_interest.id).count() > 0
 
 
 class PersonalInfo(db.Model):
@@ -109,6 +163,45 @@ class Moderator(AppUser, db.Model):
 
     id = db.Column(db.Integer, db.ForeignKey('AppUser.id'), primary_key=True)
 
+    @staticmethod
+    def delete_post(post_id):
+        try:
+            post = Post.query.get(post_id)
+            db.session.delete(post)
+            db.session.commit()
+            return True
+        except:
+            db.session.rollback()
+            return False
+
+    def consider_report(self, report_id, settlement_id):
+        try:
+            report = PostReport.query.get(report_id)
+            report.settlement_id = settlement_id
+            report.admin_id = self.id
+            db.session.add(report)
+            db.session.commit()
+            return report
+        except:
+            db.session.rollback()
+            return False
+
+    @staticmethod
+    def show_all_reports():
+        try:
+            reports = PostReport.query.all()
+            return reports
+        except:
+            return False
+
+    @staticmethod
+    def show_all_not_considered_reports():
+        try:
+            reports = PostReport.query.filter_by(settlement_id=1)
+            return reports
+        except:
+            return False
+
 
 class UserAdmin(AppUser):
     __tablename__ = "UserAdmin"
@@ -120,6 +213,55 @@ class PlaceAdmin(AppUser):
     __tablename__ = "PlaceAdmin"
 
     id = db.Column(db.Integer, db.ForeignKey('AppUser.id'), primary_key=True)
+
+    def add_place(self, name):
+        try:
+            place = Place(name=name, place_admin_id=self.id)
+            db.session.add(place)
+            db.session.commit()
+            return place
+        except:
+            db.session.rollback()
+            return False
+
+    @staticmethod
+    def delete_place(place_id):
+        try:
+            place = Place.query.get(place_id)
+            db.session.delete(place)
+            db.session.commit()
+            return True
+        except:
+            db.session.rollback()
+            return False
+
+    def consider_report(self, report_id, settlement_id):
+        try:
+            report = PlaceReport.query.get(report_id)
+            report.settlement_id = settlement_id
+            report.admin_id = self.id
+            db.session.add(report)
+            db.session.commit()
+            return report
+        except:
+            db.session.rollback()
+            return False
+
+    @staticmethod
+    def show_all_reports():
+        try:
+            reports = PlaceReport.query.all()
+            return reports
+        except:
+            return False
+
+    @staticmethod
+    def show_all_not_considered_reports():
+        try:
+            reports = PlaceReport.query.filter_by(settlement_id=1)
+            return reports
+        except:
+            return False
 
 
 class Post(db.Model, UserInteraction):
@@ -138,8 +280,31 @@ class Post(db.Model, UserInteraction):
         self.creation_date = creation_date
         self.visit_id = visit_id
 
-    def create_report(self):
-        pass
+    def create_report(self, reporter_id, reason):
+        try:
+            report = PostReport(reporter_id=reporter_id, reason=reason, post_id=self.id)
+            db.session.add(report)
+            db.session.commit()
+            return report
+        except:
+            db.session.rollback()
+            return False
+
+    def add_comment_and_rate(self, user_id, text, note):
+        try:
+            comment = Comment(creator_id=user_id, post_id=self.id, text=text, note=note)
+            db.session.add(comment)
+            db.session.commit()
+            return comment
+        except:
+            db.session.rollback()
+            return False
+
+    def show_all_post_comments(self):
+        try:
+            return Comment.query.filter(post_id=self.id).order_by(Comment.creation_date).all()
+        except:
+            return False
 
 
 class Comment(db.Model, UserInteraction):
@@ -147,12 +312,28 @@ class Comment(db.Model, UserInteraction):
 
     id = db.Column(db.Integer, primary_key=True)
     creator_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
-    creation_date = db.Column(db.DateTime)
+    post_id = db.Column(db.Integer, db.ForeignKey('Post.id'))
+    attraction_id = db.Column(db.Integer, db.ForeignKey('Attraction.id'))
+    creation_date = db.Column(db.DateTime, default=datetime.datetime.now(pytz.utc))
     text = db.Column(db.String(200))
     given_note = db.Column(db.Integer)
 
-    def create_report(self):
-        pass
+    def __init__(self, text, note, creator_id,post_id=None, attraction_id=None):
+        super().__init__(text=text)
+        self.post_id = post_id
+        self.attraction_id = attraction_id
+        self.given_note = note
+        self.creator_id = creator_id
+
+    def create_report(self, reporter_id, reason):
+        try:
+            report = CommentReport(reporter_id=reporter_id, reason=reason, comment_id=self.id)
+            db.session.add(report)
+            db.session.commit()
+            return report
+        except:
+            db.session.rollback()
+            return False
 
 
 class Place(db.Model, ReportField):
@@ -162,22 +343,43 @@ class Place(db.Model, ReportField):
     creation_date = db.Column(db.DateTime)
     name = db.Column(db.String(40), index=True, unique=True, nullable=False)
     geo_information_id = db.Column(db.Integer, db.ForeignKey('GeoInformation.id'))
+    admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'))
 
-    def __init__(self, place_admin):
+    def __init__(self, place_admin_id, name):
+        self.place_admin_id = place_admin_id
+        self.name = name
+        self.creation_date = datetime.date.today()
+        self.average_weather = None  # TODO think how show the weather
+        # TODO how to create communication? create 3 objects of creators?
         self.attractions = []
         self.communication = []
         self.hotels = []
-        self.place_admin = place_admin
-        self.average_weather = None  # TODO think how show the weather
-        # TODO how to create communication? create 3 objects of creators?
 
-    def add_geo_information(self):
-        self.geo_information = GeoInformation()
-        # TODO add db record with geoinformation, take somehow id
-        # self.geo_information_id = received_id
+    def __add_geo_information(self, country_id, language, region):
+        try:
+            self.geo_information = GeoInformation(country_id=country_id,
+                                                  language=language,
+                                                  region=region)
+            db.session.add(self.geo_information)
+            db.session.commit()
+            self.geo_information_id = self.geo_information.id
+        except:
+            db.session.rollback()
+            raise
 
-    def add_attraction(self):
-        pass
+    def add_attraction(self, name, description, photo_path, admin_id, google_maps=None, site_link=None):
+        try:
+            attraction = Attraction(name=name, description=description, place_id=self.id,
+                                    admin_id=admin_id, google_maps=google_maps, site_link=site_link)
+            db.session.add(attraction)
+            db.session.commit()
+            photo = Photo(attraction_id=attraction.id, photo_path=photo_path)
+            db.session.add(photo)
+            db.session.commit()
+            return attraction, photo
+        except:
+            db.session.rollback()
+            return False
 
     def add_communication(self):
         # parameter which choose what kind of communication we want to add and then create
@@ -187,15 +389,39 @@ class Place(db.Model, ReportField):
     def add_weather(self):
         pass
 
-    def add_hotel(self):
-        pass
+    def add_hotel(self, name, country_id, city, street, nr_of_street, admin_id, nr_apartment=None,
+                  postcode=None, google_maps_link=None, site_link=None):
+        try:
+            address = Address(country_id=country_id, city=city, google_maps_link=google_maps_link,
+                              street=street, nr_of_street=nr_of_street, nr_of_apartment=nr_apartment,
+                              postcode=postcode)
+            db.session.add(address)
+            db.session.commit()
+            hotel = Hotel(name=name, address_id=address.id, place_id=self.id,
+                          admin_id=admin_id, site_link=site_link)
+            db.session.add(hotel)
+            db.session.commit()
+            return hotel, address
+        except:
+            db.session.rollback()
+            return False
+
+    def create_report(self, reporter_id, reason):
+        try:
+            report = PlaceReport(reporter_id=reporter_id, reason=reason, place_id=self.id)
+            db.session.add(report)
+            db.session.commit()
+            return True
+        except:
+            db.session.rollback()
+            return False
 
 
 class GeoInformation(db.Model):
     __tablename__ = "GeoInformation"
 
     id = db.Column(db.Integer, primary_key=True)
-    country = db.Column(db.Integer, db.ForeignKey('Country.id'))
+    country_id = db.Column(db.Integer, db.ForeignKey('Country.id'))
     language = db.Column(db.String(50))
     region = db.Column(db.String(50))
 
@@ -204,17 +430,13 @@ class Attraction(db.Model):
     __tablename__ = "Attraction"
 
     id = db.Column(db.Integer, primary_key=True)
-    place_id = db.Column(db.Integer, db.ForeignKey('Place.id'))
+    place_id = db.Column(db.Integer, db.ForeignKey('Place.id'), nullable=False)
     description = db.Column(db.String(600), nullable=False)
     google_maps = db.Column(db.String(200))
     name = db.Column(db.String(100), nullable=False)
-    note = db.Column(db.Integer, nullable=False)
+    note = db.Column(db.Integer, default=0)
     site_link = db.Column(db.String(150))
-
-    def __init__(self):
-        self.photos = []
-        self.comments = []
-        # get all comments and photo with constraint id
+    admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'), nullable=False)
 
     def add_comment(self):
         pass
@@ -238,6 +460,13 @@ class Photo(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('Post.id'))
     attraction_id = db.Column(db.Integer, db.ForeignKey('Attraction.id'))
     photo_path = db.Column(db.String(100), index=True)
+
+
+class ProfilePhoto(db.Model):
+    __tablename__ = "ProfilePhoto"
+
+    id = db.Column(db.Integer, primary_key=True)
+    photo_path = db.Column(db.String(100), index=True, nullable=False)
 
 
 class Weather(db.Model):
@@ -277,8 +506,9 @@ class Hotel(db.Model):
     place_id = db.Column(db.Integer, db.ForeignKey('Place.id'))
     address_id = db.Column(db.Integer, db.ForeignKey('Address.id'))
     name = db.Column(db.String(100), nullable=False)
-    note = db.Column(db.Integer, nullable=False)
+    note = db.Column(db.Integer, default=0)
     site_link = db.Column(db.String(100))
+    admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'), nullable=False)
 
 
 class Transport(db.Model):
@@ -290,6 +520,7 @@ class Transport(db.Model):
     address_id = db.Column(db.Integer, db.ForeignKey('Address.id'))
     name = db.Column(db.String(50))
     site_link = db.Column(db.String(100))
+    admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'), nullable=False)
 
 
 class TypeOfTransport(db.Model):
@@ -311,11 +542,19 @@ class Visit(db.Model):
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
 
-    def __init__(self):
-        pass
-
-    def add_post(self):
-        pass
+    def add_post(self, text, photo_path, user_id):
+        try:
+            post = Post(text=text, creation_date=datetime.date.today(),
+                        creator_id=user_id, visit_id=self.id)
+            db.session.add(post)
+            db.session.commit()
+            photo = Photo(photo_path=photo_path, post_id=post.id)
+            db.session.add(post)
+            db.session.commit()
+            return post, photo
+        except:
+            db.session.rollback()
+            return False
 
 
 visit_attractions = db.Table(
@@ -369,11 +608,6 @@ class CommentReport(db.Model, Report):
         self.moderator_id = moderator_id
         self.comment_id = comment_id
 
-    # TODO
-    def consider(self, settlement_id, moderator_id):
-        self.settlement_id = settlement_id
-        self.moderator_id = moderator_id
-
 
 class UserReport(db.Model, Report):
     __tablename__ = "UserReport"
@@ -390,31 +624,22 @@ class UserReport(db.Model, Report):
         self.user_admin_id = user_admin_id
         self.reported_id = reported_id
 
-    # TODO
-    def consider(self, settlement_id, user_admin_id):
-        self.settlement_id = settlement_id
-        self.user_admin_id = user_admin_id
-
 
 class PlaceReport(db.Model, Report):
     __tablename__ = "PlaceReport"
 
     id = db.Column(db.Integer, primary_key=True)
-    place_admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'))
+    admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'))
     settlement_id = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
     reporter_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
     place_id = db.Column(db.Integer, db.ForeignKey('Place.id'))
     reason = db.Column(db.String(200))
 
-    def __init__(self, reporter_id, reason, place_id, settlement_id=1, place_admin_id=None):
+    def __init__(self, reporter_id, reason, place_id, settlement_id=1, admin_id=None):
         super().__init__(reporter_id=reporter_id, reason=reason, settlement_id=settlement_id)
-        self.place_admin_id = place_admin_id
+        self.admin_id = admin_id
         self.place_id = place_id
 
-    # TODO
-    def consider(self, settlement, place_admin_id):
-        self.settlement = settlement
-        self.place_admin_id = place_admin_id
 
 class Country(db.Model):
     __tablename__ = "Country"
@@ -439,12 +664,3 @@ class Sex(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     gender = db.Column(db.String(7), unique=True, nullable=False)
 
-
-class TypeOfInterests(db.Model):
-    __tablename__ = "TypeOfInterests"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), index=True, nullable=False, unique=True)
-
-    def __init__(self, name):
-        self.name = name
