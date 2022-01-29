@@ -12,15 +12,28 @@ def load_user(id):
     return AppUser.query.get(int(id))
 
 
-followers = db.Table('followers',
-    db.Column('follower_id', db.Integer, db.ForeignKey('AppUser.id')),
-    db.Column('followed_id', db.Integer, db.ForeignKey('AppUser.id'))
+followers = db.Table(
+    "followers",
+    db.Column("follower_id", db.Integer, db.ForeignKey("AppUser.id")),
+    db.Column("followed_id", db.Integer, db.ForeignKey("AppUser.id")),
 )
 
 user_interests = db.Table(
-    'user_interests',
-    db.Column('user_id', db.Integer, db.ForeignKey('AppUser.id')),
-    db.Column('interest_id', db.Integer, db.ForeignKey('TypeOfInterests.id'))
+    "user_interests",
+    db.Column("user_id", db.Integer, db.ForeignKey("AppUser.id")),
+    db.Column("interest_id", db.Integer, db.ForeignKey("TypeOfInterests.id")),
+)
+
+attraction_interests = db.Table(
+    "attraction_interests",
+    db.Column("attraction_id", db.Integer, db.ForeignKey("Attraction.id")),
+    db.Column("interest_id", db.Integer, db.ForeignKey("TypeOfInterests.id")),
+)
+
+visit_attractions = db.Table(
+    "visit_attractions",
+    db.Column("visit_id", db.Integer, db.ForeignKey("Visit.id")),
+    db.Column("attraction_id", db.Integer, db.ForeignKey("Attraction.id")),
 )
 
 
@@ -41,33 +54,46 @@ class AppUser(db.Model, ReportField, UserMixin):
     login = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     experience = db.Column(db.Integer, default=0)
-    experience_level_id = db.Column(db.Integer, db.ForeignKey('ExperienceLevel.id'), default=1)
-    personal_info_id = db.Column(db.Integer, db.ForeignKey('PersonalInfo.id'))
-    password_hash = db.Column(db.String(128), unique=True)
+    experience_level_id = db.Column(
+        db.Integer, db.ForeignKey("ExperienceLevel.id"), default=1
+    )
+    personal_info_id = db.Column(
+        db.Integer, db.ForeignKey("PersonalInfo.id"), nullable=False, unique=True
+    )
+    password_hash = db.Column(db.String(128))
     followed = db.relationship(
-        'AppUser', secondary=followers,
+        "AppUser",
+        secondary=followers,
         primaryjoin=(followers.c.follower_id == id),
         secondaryjoin=(followers.c.followed_id == id),
-        backref=db.backref('followers', lazy='dynamic'), lazy='dynamic')
+        backref=db.backref("followers", lazy="dynamic"),
+        lazy="dynamic",
+    )
     interest = db.relationship(
-        'TypeOfInterests', secondary=user_interests,
+        "TypeOfInterests",
+        secondary=user_interests,
         primaryjoin=(user_interests.c.user_id == id),
         secondaryjoin=(user_interests.c.interest_id == TypeOfInterests.id),
-        backref=db.backref('interest', lazy='dynamic'), lazy='dynamic')
-    profile_photo = db.Column(db.Integer, db.ForeignKey('ProfilePhoto.id'), default=1)
+        backref=db.backref("interest", lazy="dynamic"),
+        lazy="dynamic",
+    )
+    profile_photo = db.Column(db.Integer, db.ForeignKey("ProfilePhoto.id"), default=1)
 
-    __mapper_args__ = {
-        'polymorphic_identity': 'AppUser',
-        'polymorphic_on': login
-    }
+    def __init__(self, login, email, personal_info_id, experience=0):
+        self.login = login
+        self.email = email
+        self.experience = experience
+        self.personal_info_id = personal_info_id
+        self.__update_level_experience()
 
     def __repr__(self):
-        return f"user: {self.username}"
+        return f"user: {self.login}"
 
     def create_report(self, reporter_id, reason):
         try:
-            report = UserReport(reporter_id=reporter_id, reason=reason,
-                                reported_id=self.id)
+            report = UserReport(
+                reporter_id=reporter_id, reason=reason, reported_id=self.id
+            )
             db.session.add(report)
             db.session.commit()
             return report
@@ -83,8 +109,12 @@ class AppUser(db.Model, ReportField, UserMixin):
 
     def add_post(self, text, photo_path, visit_id=None):
         try:
-            post = Post(text=text, creation_date=datetime.date.today(),
-                        creator_id=self.id, visit_id=visit_id)
+            post = Post(
+                text=text,
+                creation_date=datetime.date.today(),
+                creator_id=self.id,
+                visit_id=visit_id,
+            )
             db.session.add(post)
             db.session.commit()
             photo = Photo(photo_path=photo_path, post_id=post.id)
@@ -112,13 +142,15 @@ class AppUser(db.Model, ReportField, UserMixin):
 
     def add_visit(self, place_id, hotel_id, transport_id, name, start_date, end_date):
         try:
-            visit = Visit(place_id=place_id,
-                          hotel_id=hotel_id,
-                          transport_id=transport_id,
-                          user_id=self.id,
-                          name=name,
-                          start_date=start_date,
-                          end_date=end_date)
+            visit = Visit(
+                place_id=place_id,
+                hotel_id=hotel_id,
+                transport_id=transport_id,
+                user_id=self.id,
+                name=name,
+                start_date=start_date,
+                end_date=end_date,
+            )
             db.session.add(visit)
             db.session.commit()
             return visit
@@ -135,16 +167,19 @@ class AppUser(db.Model, ReportField, UserMixin):
             self.followed.remove(user)
 
     def is_following(self, user):
-        return self.followed.filter(
-            followers.c.followed_id == user.id).count() > 0
+        return self.followed.filter(followers.c.followed_id == user.id).count() > 0
 
     def add_interest(self, type_of_interest):
         if self.already_interest(type_of_interest):
             self.interest.append(type_of_interest)
 
     def already_interest(self, type_of_interest):
-        return self.interest.filter(
-            user_interests.c.interest_id == type_of_interest.id).count() > 0
+        return (
+            self.interest.filter(
+                user_interests.c.interest_id == type_of_interest.id
+            ).count()
+            > 0
+        )
 
 
 class PersonalInfo(db.Model):
@@ -152,9 +187,9 @@ class PersonalInfo(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     city = db.Column(db.String(40), index=True)
-    country_id = db.Column(db.Integer, db.ForeignKey('Country.id'))
+    country_id = db.Column(db.Integer, db.ForeignKey("Country.id"), nullable=False)
     name = db.Column(db.String(40), nullable=False)
-    sex_id = db.Column(db.Integer, db.ForeignKey('Sex.id'))
+    sex_id = db.Column(db.Integer, db.ForeignKey("Sex.id"))
     surname = db.Column(db.String(80))
 
 
@@ -162,6 +197,9 @@ class Moderator(AppUser, db.Model):
     __tablename__ = "Moderator"
 
     id = db.Column(db.Integer, db.ForeignKey('AppUser.id'), primary_key=True)
+
+    def __init__(self, login, email, personal_info_id, experience=0):
+        super().__init__(login=login, email=email, experience=experience, personal_info_id=personal_info_id)
 
     @staticmethod
     def delete_post(post_id):
@@ -179,6 +217,7 @@ class Moderator(AppUser, db.Model):
             report = PostReport.query.get(report_id)
             report.settlement_id = settlement_id
             report.admin_id = self.id
+            report.settlement_date = datetime.date.today()
             db.session.add(report)
             db.session.commit()
             return report
@@ -208,15 +247,22 @@ class UserAdmin(AppUser):
 
     id = db.Column(db.Integer, db.ForeignKey('AppUser.id'), primary_key=True)
 
+    def __init__(self, login, email, personal_info_id, experience=0):
+        super().__init__(login=login, email=email, experience=experience, personal_info_id=personal_info_id)
+
 
 class PlaceAdmin(AppUser):
     __tablename__ = "PlaceAdmin"
 
     id = db.Column(db.Integer, db.ForeignKey('AppUser.id'), primary_key=True)
 
+    def __init__(self, login, email, personal_info_id, experience=0):
+        super().__init__(login=login, email=email, experience=experience, personal_info_id=personal_info_id)
+
+
     def add_place(self, name):
         try:
-            place = Place(name=name, place_admin_id=self.id)
+            place = Place(name=name, admin_id=self.id)
             db.session.add(place)
             db.session.commit()
             return place
@@ -240,6 +286,7 @@ class PlaceAdmin(AppUser):
             report = PlaceReport.query.get(report_id)
             report.settlement_id = settlement_id
             report.admin_id = self.id
+            report.settlement_date = datetime.date.today()
             db.session.add(report)
             db.session.commit()
             return report
@@ -268,10 +315,10 @@ class Post(db.Model, UserInteraction):
     __tablename__ = "Post"
 
     id = db.Column(db.Integer, primary_key=True)
-    visit_id = db.Column(db.Integer, db.ForeignKey('Visit.id'))
-    creator_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
-    creation_date = db.Column(db.DateTime)
-    text = db.Column(db.String(2000), nullable=False)
+    visit_id = db.Column(db.Integer, db.ForeignKey("Visit.id"), nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey("AppUser.id"), nullable=False)
+    creation_date = db.Column(db.DateTime, index=True)
+    text = db.Column(db.String(3000), nullable=False)
     note = db.Column(db.Integer, default=0)
 
     def __init__(self, creator_id, creation_date, text, visit_id):
@@ -302,7 +349,11 @@ class Post(db.Model, UserInteraction):
 
     def show_all_post_comments(self):
         try:
-            return Comment.query.filter(post_id=self.id).order_by(Comment.creation_date).all()
+            return (
+                Comment.query.filter(post_id=self.id)
+                .order_by(Comment.creation_date)
+                .all()
+            )
         except:
             return False
 
@@ -311,14 +362,16 @@ class Comment(db.Model, UserInteraction):
     __tablename__ = "Comment"
 
     id = db.Column(db.Integer, primary_key=True)
-    creator_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
-    post_id = db.Column(db.Integer, db.ForeignKey('Post.id'))
-    attraction_id = db.Column(db.Integer, db.ForeignKey('Attraction.id'))
-    creation_date = db.Column(db.DateTime, default=datetime.datetime.now(pytz.utc))
+    creator_id = db.Column(db.Integer, db.ForeignKey("AppUser.id"))
+    post_id = db.Column(db.Integer, db.ForeignKey("Post.id"))
+    attraction_id = db.Column(db.Integer, db.ForeignKey("Attraction.id"))
+    creation_date = db.Column(
+        db.DateTime, default=datetime.datetime.now(pytz.utc), index=True
+    )
     text = db.Column(db.String(200))
     given_note = db.Column(db.Integer)
 
-    def __init__(self, text, note, creator_id,post_id=None, attraction_id=None):
+    def __init__(self, text, note, creator_id, post_id=None, attraction_id=None):
         super().__init__(text=text)
         self.post_id = post_id
         self.attraction_id = attraction_id
@@ -327,7 +380,9 @@ class Comment(db.Model, UserInteraction):
 
     def create_report(self, reporter_id, reason):
         try:
-            report = CommentReport(reporter_id=reporter_id, reason=reason, comment_id=self.id)
+            report = CommentReport(
+                reporter_id=reporter_id, reason=reason, comment_id=self.id
+            )
             db.session.add(report)
             db.session.commit()
             return report
@@ -340,26 +395,28 @@ class Place(db.Model, ReportField):
     __tablename__ = "Place"
 
     id = db.Column(db.Integer, primary_key=True)
-    creation_date = db.Column(db.DateTime)
+    creation_date = db.Column(db.DateTime, index=True)
     name = db.Column(db.String(40), index=True, unique=True, nullable=False)
-    geo_information_id = db.Column(db.Integer, db.ForeignKey('GeoInformation.id'))
-    admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'))
+    geo_information_id = db.Column(
+        db.Integer, db.ForeignKey("GeoInformation.id"), nullable=False
+    )
+    admin_id = db.Column(db.Integer, db.ForeignKey("PlaceAdmin.id"))
+    attractions = db.relationship("Attraction", backref="main_place", lazy="dynamic")
+    hotels = db.relationship("Hotel", backref="main_place", lazy="dynamic")
+    communications = db.relationship("Transport", backref="main_place", lazy="dynamic")
 
-    def __init__(self, place_admin_id, name):
-        self.place_admin_id = place_admin_id
+    def __init__(self, admin_id, name):
+        self.admin_id = admin_id
         self.name = name
         self.creation_date = datetime.date.today()
         self.average_weather = None  # TODO think how show the weather
         # TODO how to create communication? create 3 objects of creators?
-        self.attractions = []
-        self.communication = []
-        self.hotels = []
 
-    def __add_geo_information(self, country_id, language, region):
+    def add_geo_information(self, country_id, language, region):
         try:
-            self.geo_information = GeoInformation(country_id=country_id,
-                                                  language=language,
-                                                  region=region)
+            self.geo_information = GeoInformation(
+                country_id=country_id, language=language, region=region
+            )
             db.session.add(self.geo_information)
             db.session.commit()
             self.geo_information_id = self.geo_information.id
@@ -367,10 +424,19 @@ class Place(db.Model, ReportField):
             db.session.rollback()
             raise
 
-    def add_attraction(self, name, description, photo_path, admin_id, google_maps=None, site_link=None):
+    def add_attraction(
+        self, name, description, photo_path, admin_id, google_maps=None, site_link=None
+    ):
         try:
-            attraction = Attraction(name=name, description=description, place_id=self.id,
-                                    admin_id=admin_id, google_maps=google_maps, site_link=site_link)
+            attraction = Attraction(
+                name=name,
+                description=description,
+                place_id=self.id,
+                admin_id=admin_id,
+                google_maps=google_maps,
+                site_link=site_link,
+            )
+            self.attractions.append(attraction)
             db.session.add(attraction)
             db.session.commit()
             photo = Photo(attraction_id=attraction.id, photo_path=photo_path)
@@ -389,16 +455,38 @@ class Place(db.Model, ReportField):
     def add_weather(self):
         pass
 
-    def add_hotel(self, name, country_id, city, street, nr_of_street, admin_id, nr_apartment=None,
-                  postcode=None, google_maps_link=None, site_link=None):
+    def add_hotel(
+        self,
+        name,
+        country_id,
+        city,
+        street,
+        nr_of_street,
+        admin_id,
+        nr_apartment=None,
+        postcode=None,
+        google_maps_link=None,
+        site_link=None,
+    ):
         try:
-            address = Address(country_id=country_id, city=city, google_maps_link=google_maps_link,
-                              street=street, nr_of_street=nr_of_street, nr_of_apartment=nr_apartment,
-                              postcode=postcode)
+            address = Address(
+                country_id=country_id,
+                city=city,
+                google_maps_link=google_maps_link,
+                street=street,
+                nr_of_street=nr_of_street,
+                nr_of_apartment=nr_apartment,
+                postcode=postcode,
+            )
             db.session.add(address)
             db.session.commit()
-            hotel = Hotel(name=name, address_id=address.id, place_id=self.id,
-                          admin_id=admin_id, site_link=site_link)
+            hotel = Hotel(
+                name=name,
+                address_id=address.id,
+                place_id=self.id,
+                admin_id=admin_id,
+                site_link=site_link,
+            )
             db.session.add(hotel)
             db.session.commit()
             return hotel, address
@@ -408,7 +496,9 @@ class Place(db.Model, ReportField):
 
     def create_report(self, reporter_id, reason):
         try:
-            report = PlaceReport(reporter_id=reporter_id, reason=reason, place_id=self.id)
+            report = PlaceReport(
+                reporter_id=reporter_id, reason=reason, place_id=self.id
+            )
             db.session.add(report)
             db.session.commit()
             return True
@@ -421,7 +511,7 @@ class GeoInformation(db.Model):
     __tablename__ = "GeoInformation"
 
     id = db.Column(db.Integer, primary_key=True)
-    country_id = db.Column(db.Integer, db.ForeignKey('Country.id'))
+    country_id = db.Column(db.Integer, db.ForeignKey("Country.id"))
     language = db.Column(db.String(50))
     region = db.Column(db.String(50))
 
@@ -430,13 +520,21 @@ class Attraction(db.Model):
     __tablename__ = "Attraction"
 
     id = db.Column(db.Integer, primary_key=True)
-    place_id = db.Column(db.Integer, db.ForeignKey('Place.id'), nullable=False)
+    place_id = db.Column(db.Integer, db.ForeignKey("Place.id"), nullable=False)
     description = db.Column(db.String(600), nullable=False)
-    google_maps = db.Column(db.String(200))
+    google_maps = db.Column(db.String(300))
     name = db.Column(db.String(100), nullable=False)
     note = db.Column(db.Integer, default=0)
-    site_link = db.Column(db.String(150))
-    admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'), nullable=False)
+    site_link = db.Column(db.String(400))
+    admin_id = db.Column(db.Integer, db.ForeignKey("PlaceAdmin.id"), nullable=False)
+    interested = db.relationship(
+        "TypeOfInterests",
+        secondary=attraction_interests,
+        primaryjoin=(attraction_interests.c.attraction_id == id),
+        secondaryjoin=(attraction_interests.c.interest_id == TypeOfInterests.id),
+        backref=db.backref("attraction_interests", lazy="dynamic"),
+        lazy="dynamic",
+    )
 
     def add_comment(self):
         pass
@@ -445,20 +543,12 @@ class Attraction(db.Model):
         pass
 
 
-attraction_interests = db.Table(
-    'attraction_interests',
-    db.Column('attraction_id', db.Integer, db.ForeignKey('Attraction.id')),
-    db.Column('interest_id', db.Integer, db.ForeignKey('TypeOfInterests.id')),
-    db.PrimaryKeyConstraint('attraction_id', "interest_id", name='attraction_interest_id')
-)
-
-
 class Photo(db.Model):
     __tablename__ = "Photo"
 
     id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('Post.id'))
-    attraction_id = db.Column(db.Integer, db.ForeignKey('Attraction.id'))
+    post_id = db.Column(db.Integer, db.ForeignKey("Post.id"))
+    attraction_id = db.Column(db.Integer, db.ForeignKey("Attraction.id"))
     photo_path = db.Column(db.String(100), index=True)
 
 
@@ -473,8 +563,10 @@ class Weather(db.Model):
     __tablename__ = "weather"
 
     id = db.Column(db.Integer, primary_key=True)
-    place_id = db.Column(db.Integer, db.ForeignKey('Place.id'))
-    cloudiness = db.Column(db.Integer)  # possible string, check what values we will accept here
+    place_id = db.Column(db.Integer, db.ForeignKey("Place.id"))
+    cloudiness = db.Column(
+        db.Integer
+    )  # possible string, check what values we will accept here
     temperature = db.Column(db.Float)
     humidity = db.Column(db.Integer)
     date = db.Column(db.Date)
@@ -490,9 +582,9 @@ class Address(db.Model):
     __tablename__ = "Address"
 
     id = db.Column(db.Integer, primary_key=True)
-    country_id = db.Column(db.Integer, db.ForeignKey('Country.id'))
+    country_id = db.Column(db.Integer, db.ForeignKey("Country.id"))
     city = db.Column(db.String(50), nullable=False)
-    google_maps_link = db.Column(db.String(150))
+    google_maps_link = db.Column(db.String(300))
     street = db.Column(db.String(100), nullable=False)
     nr_of_street = db.Column(db.String(10))
     nr_of_apartment = db.Column(db.Integer)
@@ -503,24 +595,24 @@ class Hotel(db.Model):
     __tablename__ = "Hotel"
 
     id = db.Column(db.Integer, primary_key=True)
-    place_id = db.Column(db.Integer, db.ForeignKey('Place.id'))
-    address_id = db.Column(db.Integer, db.ForeignKey('Address.id'))
+    place_id = db.Column(db.Integer, db.ForeignKey("Place.id"))
+    address_id = db.Column(db.Integer, db.ForeignKey("Address.id"))
     name = db.Column(db.String(100), nullable=False)
     note = db.Column(db.Integer, default=0)
-    site_link = db.Column(db.String(100))
-    admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'), nullable=False)
+    site_link = db.Column(db.String(500))
+    admin_id = db.Column(db.Integer, db.ForeignKey("PlaceAdmin.id"), nullable=False)
 
 
 class Transport(db.Model):
     __tablename__ = "Transport"
 
     id = db.Column(db.Integer, primary_key=True)
-    type_id = db.Column(db.Integer, db.ForeignKey('TypeOfTransport.id'))
-    place_id = db.Column(db.Integer, db.ForeignKey('Place.id'))
-    address_id = db.Column(db.Integer, db.ForeignKey('Address.id'))
+    type_id = db.Column(db.Integer, db.ForeignKey("TypeOfTransport.id"))
+    place_id = db.Column(db.Integer, db.ForeignKey("Place.id"))
+    address_id = db.Column(db.Integer, db.ForeignKey("Address.id"))
     name = db.Column(db.String(50))
-    site_link = db.Column(db.String(100))
-    admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'), nullable=False)
+    site_link = db.Column(db.String(300))
+    admin_id = db.Column(db.Integer, db.ForeignKey("PlaceAdmin.id"), nullable=False)
 
 
 class TypeOfTransport(db.Model):
@@ -534,18 +626,30 @@ class Visit(db.Model):
     __tablename__ = "Visit"
 
     id = db.Column(db.Integer, primary_key=True)
-    place_id = db.Column(db.Integer, db.ForeignKey('Place.id'))
-    hotel_id = db.Column(db.Integer, db.ForeignKey('Hotel.id'))
-    transport_id = db.Column(db.Integer, db.ForeignKey('Transport.id'))
-    user_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
+    place_id = db.Column(db.Integer, db.ForeignKey("Place.id"))
+    hotel_id = db.Column(db.Integer, db.ForeignKey("Hotel.id"))
+    transport_id = db.Column(db.Integer, db.ForeignKey("Transport.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("AppUser.id"))
     name = db.Column(db.String(100), nullable=False)
-    start_date = db.Column(db.Date)
-    end_date = db.Column(db.Date)
+    start_date = db.Column(db.Date, index=True)
+    end_date = db.Column(db.Date, index=True)
+    attractions = db.relationship(
+        "Attraction",
+        secondary=visit_attractions,
+        primaryjoin=(visit_attractions.c.visit_id == id),
+        secondaryjoin=(visit_attractions.c.attraction_id == Attraction.id),
+        backref=db.backref("visits", lazy="dynamic"),
+        lazy="dynamic",
+    )
 
     def add_post(self, text, photo_path, user_id):
         try:
-            post = Post(text=text, creation_date=datetime.date.today(),
-                        creator_id=user_id, visit_id=self.id)
+            post = Post(
+                text=text,
+                creation_date=datetime.date.today(),
+                creator_id=user_id,
+                visit_id=self.id,
+            )
             db.session.add(post)
             db.session.commit()
             photo = Photo(photo_path=photo_path, post_id=post.id)
@@ -555,14 +659,6 @@ class Visit(db.Model):
         except:
             db.session.rollback()
             return False
-
-
-visit_attractions = db.Table(
-    'visit_attractions',
-    db.Column('visit_id', db.Integer, db.ForeignKey('Visit.id')),
-    db.Column('attraction_id', db.Integer, db.ForeignKey('Attraction.id')),
-    db.PrimaryKeyConstraint('visit_id', "attraction_id", name='visit_attraction_id')
-)
 
 
 class Settlement(db.Model):
@@ -576,69 +672,94 @@ class PostReport(db.Model, Report):
     __tablename__ = "PostReport"
 
     id = db.Column(db.Integer, primary_key=True)
-    moderator_id = db.Column(db.Integer, db.ForeignKey('Moderator.id'))
-    settlement_id = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
-    reporter_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
-    post_id = db.Column(db.Integer, db.ForeignKey('Post.id'))
+    moderator_id = db.Column(db.Integer, db.ForeignKey("Moderator.id"))
+    settlement_id = db.Column(db.Integer, db.ForeignKey("Settlement.id"))
+    reporter_id = db.Column(db.Integer, db.ForeignKey("AppUser.id"))
+    post_id = db.Column(db.Integer, db.ForeignKey("Post.id"))
     reason = db.Column(db.String(200))
+    creation_date = db.Column(db.Date, index=True)
+    settlement_date = db.Column(db.Date, index=True)
 
-    def __init__(self, reporter_id, reason, post_id, settlement_id=1, moderator_id=None):
-        super().__init__(reporter_id=reporter_id, reason=reason, settlement_id=settlement_id)
+    def __init__(
+        self, reporter_id, reason, post_id, settlement_id=1, moderator_id=None
+    ):
+        super().__init__(
+            reporter_id=reporter_id, reason=reason, settlement_id=settlement_id
+        )
         self.moderator_id = moderator_id
         self.post_id = post_id
-
-    # TODO
-    def consider(self, settlement_id, moderator_id):
-        self.settlement_id = settlement_id
-        self.moderator_id = moderator_id
+        self.creation_date = datetime.date.today()
+        self.settlement_date = None
 
 
 class CommentReport(db.Model, Report):
     __tablename__ = "CommentReport"
 
     id = db.Column(db.Integer, primary_key=True)
-    moderator_id = db.Column(db.Integer, db.ForeignKey('Moderator.id'))
-    settlement_id = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
-    reporter_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
-    comment_id = db.Column(db.Integer, db.ForeignKey('Comment.id'))
+    moderator_id = db.Column(db.Integer, db.ForeignKey("Moderator.id"))
+    settlement_id = db.Column(db.Integer, db.ForeignKey("Settlement.id"))
+    reporter_id = db.Column(db.Integer, db.ForeignKey("AppUser.id"))
+    comment_id = db.Column(db.Integer, db.ForeignKey("Comment.id"))
     reason = db.Column(db.String(200))
+    creation_date = db.Column(db.Date, index=True)
+    settlement_date = db.Column(db.Date, index=True)
 
-    def __init__(self, reporter_id, reason, comment_id, settlement_id=1, moderator_id=None):
-        super().__init__(reporter_id=reporter_id, reason=reason, settlement_id=settlement_id)
+    def __init__(
+        self, reporter_id, reason, comment_id, settlement_id=1, moderator_id=None
+    ):
+        super().__init__(
+            reporter_id=reporter_id, reason=reason, settlement_id=settlement_id
+        )
         self.moderator_id = moderator_id
         self.comment_id = comment_id
+        self.creation_date = datetime.date.today()
+        self.settlement_date = None
 
 
 class UserReport(db.Model, Report):
     __tablename__ = "UserReport"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_admin_id = db.Column(db.Integer, db.ForeignKey('UserAdmin.id'), default=None)
-    settlement_id = db.Column(db.Integer, db.ForeignKey('Settlement.id'), default=1)
-    reporter_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
-    reported_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
+    user_admin_id = db.Column(db.Integer, db.ForeignKey("UserAdmin.id"), default=None)
+    settlement_id = db.Column(db.Integer, db.ForeignKey("Settlement.id"), default=1)
+    reporter_id = db.Column(db.Integer, db.ForeignKey("AppUser.id"))
+    reported_id = db.Column(db.Integer, db.ForeignKey("AppUser.id"))
     reason = db.Column(db.String(200))
+    creation_date = db.Column(db.Date, index=True)
+    settlement_date = db.Column(db.Date, index=True)
 
-    def __init__(self, reporter_id, reason, reported_id, settlement_id=1, user_admin_id=None):
-        super().__init__(reporter_id=reporter_id, reason=reason, settlement_id=settlement_id)
+    def __init__(
+        self, reporter_id, reason, reported_id, settlement_id=1, user_admin_id=None
+    ):
+        super().__init__(
+            reporter_id=reporter_id, reason=reason, settlement_id=settlement_id
+        )
         self.user_admin_id = user_admin_id
         self.reported_id = reported_id
+        self.creation_date = datetime.date.today()
+        self.settlement_date = None
 
 
 class PlaceReport(db.Model, Report):
     __tablename__ = "PlaceReport"
 
     id = db.Column(db.Integer, primary_key=True)
-    admin_id = db.Column(db.Integer, db.ForeignKey('PlaceAdmin.id'))
-    settlement_id = db.Column(db.Integer, db.ForeignKey('Settlement.id'))
-    reporter_id = db.Column(db.Integer, db.ForeignKey('AppUser.id'))
-    place_id = db.Column(db.Integer, db.ForeignKey('Place.id'))
+    admin_id = db.Column(db.Integer, db.ForeignKey("PlaceAdmin.id"))
+    settlement_id = db.Column(db.Integer, db.ForeignKey("Settlement.id"))
+    reporter_id = db.Column(db.Integer, db.ForeignKey("AppUser.id"))
+    place_id = db.Column(db.Integer, db.ForeignKey("Place.id"))
     reason = db.Column(db.String(200))
+    creation_date = db.Column(db.Date, index=True)
+    settlement_date = db.Column(db.Date, index=True)
 
     def __init__(self, reporter_id, reason, place_id, settlement_id=1, admin_id=None):
-        super().__init__(reporter_id=reporter_id, reason=reason, settlement_id=settlement_id)
+        super().__init__(
+            reporter_id=reporter_id, reason=reason, settlement_id=settlement_id
+        )
         self.admin_id = admin_id
         self.place_id = place_id
+        self.creation_date = datetime.date.today()
+        self.settlement_date = None
 
 
 class Country(db.Model):
@@ -663,4 +784,3 @@ class Sex(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     gender = db.Column(db.String(7), unique=True, nullable=False)
-

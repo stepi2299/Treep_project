@@ -2,8 +2,6 @@ from abc import ABC, abstractmethod
 
 
 class ReportField:
-    def __init__(self):
-        pass
 
     @abstractmethod
     def create_report(self, reporter_id, reason):

@@ -11,7 +11,7 @@ class Config:
     DB_USER = os.environ.get("DB_USER", "postgres")
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "postgres")
     DB_PORT = os.environ.get("DB_PORT", 5432)
-    DB_NAME = os.environ.get("DB_NAME", "treep_practice")
+    DB_NAME = os.environ.get("DB_NAME", "treep")
     DB_HOST = os.environ.get("DB_NAME", "localhost")
     SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
