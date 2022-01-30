@@ -109,12 +109,7 @@ class AppUser(db.Model, ReportField, UserMixin):
 
     def add_post(self, text, photo_path, visit_id=None):
         try:
-            post = Post(
-                text=text,
-                creation_date=datetime.date.today(),
-                creator_id=self.id,
-                visit_id=visit_id,
-            )
+            post = Post(text=text, creator_id=self.id, visit_id=visit_id,)
             db.session.add(post)
             db.session.commit()
             photo = Photo(photo_path=photo_path, post_id=post.id)
@@ -170,8 +165,12 @@ class AppUser(db.Model, ReportField, UserMixin):
         return self.followed.filter(followers.c.followed_id == user.id).count() > 0
 
     def add_interest(self, type_of_interest):
-        if self.already_interest(type_of_interest):
+        if not self.already_interest(type_of_interest):
             self.interest.append(type_of_interest)
+
+    def delete_interest(self, type_of_interest):
+        if self.already_interest(type_of_interest):
+            self.interest.delete(type_of_interest)
 
     def already_interest(self, type_of_interest):
         return (
@@ -180,6 +179,30 @@ class AppUser(db.Model, ReportField, UserMixin):
             ).count()
             > 0
         )
+
+    def show_user_posts(self):
+        return (
+            Post.query.filter_by(creator_id=self.id)
+            .order_by(Post.creation_date.desc())
+            .all()
+        )
+
+    def followed_posts(self):
+        followed = (
+            Post.query.join(followers, (followers.c.followed_id == Post.creator_id))
+            .filter(followers.c.follower_id == self.id)
+            .order_by(Post.creation_date.desc())
+        )
+        own = self.show_user_posts()
+        return followed.union(own).order_by(Post.creation_date.desc())
+
+    def all_user_visits(self):
+        visits = Visit.query.filter_by(user_id=self.id).order_by(Visit.end_date.desc())
+        return visits
+
+    def visited_places(self):
+        # TODO implement query (with join from visit)
+        return list()
 
 
 class PersonalInfo(db.Model):
@@ -196,10 +219,15 @@ class PersonalInfo(db.Model):
 class Moderator(AppUser, db.Model):
     __tablename__ = "Moderator"
 
-    id = db.Column(db.Integer, db.ForeignKey('AppUser.id'), primary_key=True)
+    id = db.Column(db.Integer, db.ForeignKey("AppUser.id"), primary_key=True)
 
     def __init__(self, login, email, personal_info_id, experience=0):
-        super().__init__(login=login, email=email, experience=experience, personal_info_id=personal_info_id)
+        super().__init__(
+            login=login,
+            email=email,
+            experience=experience,
+            personal_info_id=personal_info_id,
+        )
 
     @staticmethod
     def delete_post(post_id):
@@ -245,20 +273,29 @@ class Moderator(AppUser, db.Model):
 class UserAdmin(AppUser):
     __tablename__ = "UserAdmin"
 
-    id = db.Column(db.Integer, db.ForeignKey('AppUser.id'), primary_key=True)
+    id = db.Column(db.Integer, db.ForeignKey("AppUser.id"), primary_key=True)
 
     def __init__(self, login, email, personal_info_id, experience=0):
-        super().__init__(login=login, email=email, experience=experience, personal_info_id=personal_info_id)
+        super().__init__(
+            login=login,
+            email=email,
+            experience=experience,
+            personal_info_id=personal_info_id,
+        )
 
 
 class PlaceAdmin(AppUser):
     __tablename__ = "PlaceAdmin"
 
-    id = db.Column(db.Integer, db.ForeignKey('AppUser.id'), primary_key=True)
+    id = db.Column(db.Integer, db.ForeignKey("AppUser.id"), primary_key=True)
 
     def __init__(self, login, email, personal_info_id, experience=0):
-        super().__init__(login=login, email=email, experience=experience, personal_info_id=personal_info_id)
-
+        super().__init__(
+            login=login,
+            email=email,
+            experience=experience,
+            personal_info_id=personal_info_id,
+        )
 
     def add_place(self, name):
         try:
@@ -321,11 +358,11 @@ class Post(db.Model, UserInteraction):
     text = db.Column(db.String(3000), nullable=False)
     note = db.Column(db.Integer, default=0)
 
-    def __init__(self, creator_id, creation_date, text, visit_id):
+    def __init__(self, creator_id, text, visit_id, note=0):
+        super().__init__(text=text)
         self.creator_id = creator_id
-        self.text = text
-        self.creation_date = creation_date
         self.visit_id = visit_id
+        self.note = note
 
     def create_report(self, reporter_id, reason):
         try:
@@ -350,7 +387,7 @@ class Post(db.Model, UserInteraction):
     def show_all_post_comments(self):
         try:
             return (
-                Comment.query.filter(post_id=self.id)
+                Comment.query.filter_by(post_id=self.id)
                 .order_by(Comment.creation_date)
                 .all()
             )
@@ -505,6 +542,11 @@ class Place(db.Model, ReportField):
         except:
             db.session.rollback()
             return False
+
+    # TODO paginate
+    @staticmethod
+    def get_all_places(self):
+        return Place.query.order_by(Place.note.desc())
 
 
 class GeoInformation(db.Model):

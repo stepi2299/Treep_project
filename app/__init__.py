@@ -10,7 +10,7 @@ flask_app.config.from_object(Config)
 db = SQLAlchemy(flask_app)
 migrate = Migrate(flask_app, db)
 login = LoginManager(flask_app)
-photos = UploadSet('photos', IMAGES)
+photos = UploadSet("photos", IMAGES)
 configure_uploads(flask_app, photos)
 
 

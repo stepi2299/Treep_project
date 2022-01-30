@@ -94,10 +94,18 @@ def fill_with_mandatory_data():
         surname="Marchewa",
     )
     user3_info = PersonalInfo(
-        city="Toronto", country_id=country2.id, name="Mark", sex_id=s1.id, surname="Baker"
+        city="Toronto",
+        country_id=country2.id,
+        name="Mark",
+        sex_id=s1.id,
+        surname="Baker",
     )
     user4_info = PersonalInfo(
-        city="Londyn", country_id=country3.id, name="Romelu", sex_id=s1.id, surname="Lukaku"
+        city="Londyn",
+        country_id=country3.id,
+        name="Romelu",
+        sex_id=s1.id,
+        surname="Lukaku",
     )
     db.session.add_all([user1_info, user2_info, user3_info, user4_info])
     db.session.commit()
@@ -157,15 +165,21 @@ def fill_with_mandatory_data():
     db.session.add_all([z_inf1, z_inf2, z_inf3])
     db.session.commit()
 
-    moderator1 = Moderator(login="moderatorek", email="motorek@gamil.com", personal_info_id=z_inf1.id)
+    moderator1 = Moderator(
+        login="moderatorek", email="motorek@gamil.com", personal_info_id=z_inf1.id
+    )
     moderator1.set_password("moderatorek")
     db.session.add(moderator1)
     db.session.commit()
-    administrator1 = UserAdmin(login="adi", email="add@gamil.com", personal_info_id=z_inf2.id)
+    administrator1 = UserAdmin(
+        login="adi", email="add@gamil.com", personal_info_id=z_inf2.id
+    )
     administrator1.set_password("adminek")
     db.session.add(administrator1)
     db.session.commit()
-    place_admin1 = PlaceAdmin(login="adminek", email="adminek@gamil.com", personal_info_id=z_inf3.id)
+    place_admin1 = PlaceAdmin(
+        login="adminek", email="adminek@gamil.com", personal_info_id=z_inf3.id
+    )
     place_admin1.set_password("adminek_miejsc")
     db.session.add(place_admin1)
     db.session.commit()
@@ -173,38 +187,68 @@ def fill_with_mandatory_data():
     place1 = Place(name="Barcelona", admin_id=place_admin1.id)
     place2 = Place(name="Paris", admin_id=place_admin1.id)
     place3 = Place(name="Warszawa", admin_id=place_admin1.id)
-    place1.add_geo_information(country_id=country1.id, language="Spanish, Catalan", region="Catalonia")
-    place2.add_geo_information(country_id=country2.id, language="French", region="Ile-de-France")
-    place3.add_geo_information(country_id=country3.id, language="Polish", region="Mazowieckie")
+    place1.add_geo_information(
+        country_id=country1.id, language="Spanish, Catalan", region="Catalonia"
+    )
+    place2.add_geo_information(
+        country_id=country2.id, language="French", region="Ile-de-France"
+    )
+    place3.add_geo_information(
+        country_id=country3.id, language="Polish", region="Mazowieckie"
+    )
     db.session.add_all([place1, place2, place3])
     db.session.commit()
 
-    place1.add_attraction(name="Camp Nou", description="Pieknie graja",
-                          photo_path="app/static/img/campnou.jpg", admin_id=place_admin1.id,
-                          site_link="https://www.fcbarcelona.com/en/club/facilities/camp-nou",
-                          google_maps='https://www.google.com/maps/place/Barcelona,+Prowincja+Barcelona,+Hiszpania/@41.3927755,2.0701494,12z/data=!3m1!4b1!4m5!3m4!1s0x12a49816718e30e5:0x44b0fb3d4f47660a!8m2!3d41.3873974!4d2.168568"')
+    place1.add_attraction(
+        name="Camp Nou",
+        description="Pieknie graja",
+        photo_path="app/static/img/campnou.jpg",
+        admin_id=place_admin1.id,
+        site_link="https://www.fcbarcelona.com/en/club/facilities/camp-nou",
+        google_maps='https://www.google.com/maps/place/Barcelona,+Prowincja+Barcelona,+Hiszpania/@41.3927755,2.0701494,12z/data=!3m1!4b1!4m5!3m4!1s0x12a49816718e30e5:0x44b0fb3d4f47660a!8m2!3d41.3873974!4d2.168568"',
+    )
 
-    place2.add_attraction(name="Eiffel Tower", description="Piekna wieza",
-                          photo_path="app/static/img/eifel.jpg", admin_id=place_admin1.id,
-                          site_link="https://www.toureiffel.paris/fr",
-                          google_maps="https://www.google.com/maps/place/Wie%C5%BCa+Eiffla/@48.8583701,2.2944813,15z/data=!4m5!3m4!1s0x0:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813")
+    place2.add_attraction(
+        name="Eiffel Tower",
+        description="Piekna wieza",
+        photo_path="app/static/img/eifel.jpg",
+        admin_id=place_admin1.id,
+        site_link="https://www.toureiffel.paris/fr",
+        google_maps="https://www.google.com/maps/place/Wie%C5%BCa+Eiffla/@48.8583701,2.2944813,15z/data=!4m5!3m4!1s0x0:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813",
+    )
 
-    place3.add_attraction(name="Palac kultury i nauki", description="piekny palac",
-                          photo_path="app/static/img/pkin.jpg", admin_id=place_admin1.id,
-                          site_link="https://pkin.pl/",
-                          google_maps="https://www.google.com/maps/place/Pa%C5%82ac+Kultury+i+Nauki/@52.231838,21.005995,15z/data=!4m5!3m4!1s0x0:0xc2e97ae5311f2dc2!8m2!3d52.231838!4d21.005995")
+    place3.add_attraction(
+        name="Palac kultury i nauki",
+        description="piekny palac",
+        photo_path="app/static/img/pkin.jpg",
+        admin_id=place_admin1.id,
+        site_link="https://pkin.pl/",
+        google_maps="https://www.google.com/maps/place/Pa%C5%82ac+Kultury+i+Nauki/@52.231838,21.005995,15z/data=!4m5!3m4!1s0x0:0xc2e97ae5311f2dc2!8m2!3d52.231838!4d21.005995",
+    )
 
     db.session.add_all([place1, place2, place3])
     db.session.commit()
 
     weather1 = Weather(
-        place_id=place1.id, cloudiness=1, temperature=39, humidity=6, date=datetime.date(2021, 6, 22)
+        place_id=place1.id,
+        cloudiness=1,
+        temperature=39,
+        humidity=6,
+        date=datetime.date(2021, 6, 22),
     )
     weather2 = Weather(
-        place_id=place2.id, cloudiness=7, temperature=10, humidity=7, date=datetime.date(21, 6, 12)
+        place_id=place2.id,
+        cloudiness=7,
+        temperature=10,
+        humidity=7,
+        date=datetime.date(21, 6, 12),
     )
     weather3 = Weather(
-        place_id=place3.id, cloudiness=11, temperature=-2, humidity=8, date=datetime.date(21, 2, 2)
+        place_id=place3.id,
+        cloudiness=11,
+        temperature=-2,
+        humidity=8,
+        date=datetime.date(21, 2, 2),
     )
     db.session.add_all([weather1, weather2, weather3])
     db.session.commit()
@@ -245,7 +289,7 @@ def fill_with_mandatory_data():
         name="Novotel Barcelona City",
         note=1,
         site_link="https://www.guestreservations.com/novotel-barcelona-city/",
-        admin_id=place_admin1.id
+        admin_id=place_admin1.id,
     )
     place1.hotels.append(hotel1)
     hotel2 = Hotel(
@@ -254,7 +298,7 @@ def fill_with_mandatory_data():
         name="Hotel Montparnasse Alesia",
         note=2,
         site_link="https://www.hotelsaphirgrenelle.fr/en/",
-        admin_id=place_admin1.id
+        admin_id=place_admin1.id,
     )
     place2.hotels.append(hotel2)
     hotel3 = Hotel(
@@ -263,7 +307,7 @@ def fill_with_mandatory_data():
         name="NYX Hotel Warsaw",
         note=3,
         site_link="https://www.leonardo-hotels.com/",
-        admin_id=place_admin1.id
+        admin_id=place_admin1.id,
     )
     place3.hotels.append(hotel3)
     db.session.add_all([hotel1, hotel2, hotel3])
@@ -275,7 +319,7 @@ def fill_with_mandatory_data():
         address_id=address1.id,
         name="Barcelona Bus Station",
         site_link="https://barcelonanord.barcelona/en",
-        admin_id=place_admin1.id
+        admin_id=place_admin1.id,
     )
     transport2 = Transport(
         type_id=transport_type3.id,
@@ -283,7 +327,7 @@ def fill_with_mandatory_data():
         address_id=address2.id,
         name="Paris Charles de Gaulle Airport",
         site_link="https://www.parisaeroport.fr/en",
-        admin_id=place_admin1.id
+        admin_id=place_admin1.id,
     )
     transport3 = Transport(
         type_id=transport_type1.id,
@@ -291,7 +335,7 @@ def fill_with_mandatory_data():
         address_id=address3.id,
         name="Train Warsaw",
         site_link="https://www.ztm.waw.pl/",
-        admin_id=place_admin1.id
+        admin_id=place_admin1.id,
     )
     db.session.add_all([transport1, transport2, transport3])
     db.session.commit()
@@ -333,22 +377,16 @@ def fill_with_mandatory_data():
     db.session.commit()
 
     post1 = Post(
-        creator_id=user3.id,
-        text="best trip ever",
-        creation_date=datetime.date(2014, 6, 13),
-        visit_id=visit1.id,
+        creator_id=user1.id, text="best trip ever", visit_id=visit1.id, note=90
     )
     post2 = Post(
-        creator_id=user3.id,
-        text="fajnie fajniutko",
-        creation_date=datetime.date(2021, 1, 18),
-        visit_id=visit2.id,
+        creator_id=user2.id, text="fajnie fajniutko", visit_id=visit2.id, note=60
     )
     post3 = Post(
         creator_id=user3.id,
         text="spoko bo tylko z domu na chwile wyszedlem",
-        creation_date=datetime.date(2022, 1, 28),
         visit_id=visit3.id,
+        note=20,
     )
     db.session.add_all([post1, post2, post3])
     db.session.commit()
@@ -356,9 +394,7 @@ def fill_with_mandatory_data():
     photo1 = Photo(post_id=1, photo_path=r"app/static/img/campnou.jpg")
     photo2 = Photo(post_id=2, photo_path=r"app/static/img/eifel.jpg")
     photo3 = Photo(post_id=3, photo_path=r"app/static/img/pkin.jpg")
-    db.session.add_all(
-        [photo1, photo2, photo3]
-    )
+    db.session.add_all([photo1, photo2, photo3])
     db.session.commit()
 
     comment1 = Comment(
@@ -368,10 +404,7 @@ def fill_with_mandatory_data():
         note=1,
     )
     comment2 = Comment(
-        creator_id=user3.id,
-        post_id=post2.id,
-        text="Fantastyczne widoki",
-        note=-1,
+        creator_id=user3.id, post_id=post2.id, text="Fantastyczne widoki", note=-1,
     )
     comment3 = Comment(
         creator_id=user3.id,
@@ -413,14 +446,10 @@ def fill_with_mandatory_data():
     db.session.commit()
 
     comment_report1 = CommentReport(
-        reporter_id=user3.id,
-        reason="sad comment :(",
-        comment_id=comment1.id,
+        reporter_id=user3.id, reason="sad comment :(", comment_id=comment1.id,
     )
     comment_report2 = CommentReport(
-        reporter_id=user3.id,
-        reason="sjdfgbsdngikfgdj",
-        comment_id=comment2.id
+        reporter_id=user3.id, reason="sjdfgbsdngikfgdj", comment_id=comment2.id
     )
     comment_report3 = CommentReport(
         reporter_id=user3.id,
@@ -440,14 +469,10 @@ def fill_with_mandatory_data():
         user_admin_id=administrator1.id,
     )
     user_report2 = UserReport(
-        reporter_id=user3.id,
-        reason="he's not normal",
-        reported_id=user2.id
+        reporter_id=user3.id, reason="he's not normal", reported_id=user2.id
     )
     user_report3 = UserReport(
-        reporter_id=user3.id,
-        reason="AAAAAAAAAAAAAAAAAAAAA",
-        reported_id=user3.id
+        reporter_id=user3.id, reason="AAAAAAAAAAAAAAAAAAAAA", reported_id=user3.id
     )
     db.session.add_all([user_report1, user_report2, user_report3])
     db.session.commit()
@@ -455,12 +480,10 @@ def fill_with_mandatory_data():
     place_report1 = PlaceReport(
         reporter_id=user3.id,
         reason="i dont like it, my gf broke up with me here",
-        place_id=place1.id
+        place_id=place1.id,
     )
     place_report2 = PlaceReport(
-        reporter_id=user3.id,
-        reason="this place dont exist",
-        place_id=place2.id
+        reporter_id=user3.id, reason="this place dont exist", place_id=place2.id
     )
     place_report3 = PlaceReport(
         reporter_id=user3.id,
@@ -498,9 +521,21 @@ def fill_with_mandatory_data():
     visit2.attractions.append(attraction2)
     visit3.attractions.append(attraction3)
 
-    db.session.add_all([user1, user2, user3, user4, attraction1, attraction2, attraction3, visit1, visit2, visit3])
+    db.session.add_all(
+        [
+            user1,
+            user2,
+            user3,
+            user4,
+            attraction1,
+            attraction2,
+            attraction3,
+            visit1,
+            visit2,
+            visit3,
+        ]
+    )
     db.session.commit()
 
 
 fill_with_mandatory_data()
-
