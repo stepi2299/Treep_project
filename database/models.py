@@ -113,9 +113,9 @@ class AppUser(db.Model, ReportField, UserMixin):
             db.session.add(post)
             db.session.commit()
             photo = Photo(photo_path=photo_path, post_id=post.id)
-            db.session.add(post)
+            db.session.add(photo)
             db.session.commit()
-            return post, photo
+            return True
         except:
             db.session.rollback()
             return False
@@ -184,7 +184,6 @@ class AppUser(db.Model, ReportField, UserMixin):
         return (
             Post.query.filter_by(creator_id=self.id)
             .order_by(Post.creation_date.desc())
-            .all()
         )
 
     def followed_posts(self):
@@ -388,11 +387,14 @@ class Post(db.Model, UserInteraction):
         try:
             return (
                 Comment.query.filter_by(post_id=self.id)
-                .order_by(Comment.creation_date)
+                .order_by(Comment.creation_date.desc())
                 .all()
             )
         except:
             return False
+
+    def get_visit(self):
+        return Visit.query.filter_by(id=self.visit_id).one()
 
 
 class Comment(db.Model, UserInteraction):

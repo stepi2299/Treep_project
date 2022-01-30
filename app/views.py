@@ -58,3 +58,25 @@ def user(user_id):
             "places": usr_places,
         }
     )
+
+
+@flask_app.route('/user/<user_id>/add_post', methods=['POST'])
+def result():
+    post = request.json
+    if post:
+        result = current_user.add_post(text=post['text'], photo_path=post['photo_path'], visit_id=post['visit_id'])
+        return jsonify({"result": result})
+    return "No player information is given"
+
+
+@flask_app.route("/main", methods=['GET'])
+def main():
+    usr = AppUser.query.get(1)
+    posts = usr.followed_posts()
+    #posts = current_user.followed_posts() this will work after proper logging
+    first_post = posts[0]
+    comments = first_post.show_all_post_comments()
+    visit = first_post.get_visit()
+    return jsonify({'post text': posts[0].text,
+                    'comment': comments[0].text,
+                    'visit': visit.name})
