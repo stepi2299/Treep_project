@@ -89,6 +89,20 @@ class AppUser(db.Model, ReportField, UserMixin):
     def __repr__(self):
         return f"user: {self.login}"
 
+    @staticmethod
+    def validate_login(login):
+        user = AppUser.query.filter_by(login=login).first()
+        if user is not None:
+            return False
+        return True
+
+    @staticmethod
+    def validate_email(email):
+        user = AppUser.query.filter_by(email=email.data).first()
+        if user is not None:
+            return False
+        return True
+
     def create_report(self, reporter_id, reason):
         try:
             report = UserReport(
@@ -109,13 +123,30 @@ class AppUser(db.Model, ReportField, UserMixin):
 
     def add_post(self, text, photo_path, visit_id=None):
         try:
-            post = Post(text=text, creator_id=self.id, visit_id=visit_id,)
+            post = Post(text=text, creator_id=self.id, visit_id=visit_id)
             db.session.add(post)
             db.session.commit()
             photo = Photo(photo_path=photo_path, post_id=post.id)
             db.session.add(photo)
             db.session.commit()
             return True
+        except:
+            db.session.rollback()
+            return False
+
+    def hide_interaction(self, post_id, deletion_cause):
+        try:
+            post = Post.query.get(post_id)
+            post.can_delete(self.experience_level_id)
+            if post.can_delete:
+                post.deleted = True
+                post.deletion_cause = deletion_cause
+                post.deletion_user = self.id
+                db.session.add(post)
+                db.session.commit()
+                return True
+            else:
+                return False
         except:
             db.session.rollback()
             return False
@@ -187,6 +218,7 @@ class AppUser(db.Model, ReportField, UserMixin):
         )
 
     def followed_posts(self):
+        # photos!!!
         followed = (
             Post.query.join(followers, (followers.c.followed_id == Post.creator_id))
             .filter(followers.c.follower_id == self.id)
@@ -229,22 +261,24 @@ class Moderator(AppUser, db.Model):
         )
 
     @staticmethod
-    def delete_post(post_id):
+    def delete_interaction(model, interaction_id):
         try:
-            post = Post.query.get(post_id)
-            db.session.delete(post)
+            interaction = model.query.get(interaction_id)
+            db.session.delete(interaction)
             db.session.commit()
             return True
         except:
             db.session.rollback()
             return False
 
-    def consider_report(self, report_id, settlement_id):
+    def consider_report(self, report_id, settlement_id, model):
         try:
-            report = PostReport.query.get(report_id)
+            report = model.query.get(report_id)
             report.settlement_id = settlement_id
             report.admin_id = self.id
             report.settlement_date = datetime.date.today()
+            if settlement_id == 3:
+                Moderator.delete_interaction(model, report.interaction_id)
             db.session.add(report)
             db.session.commit()
             return report
@@ -253,20 +287,23 @@ class Moderator(AppUser, db.Model):
             return False
 
     @staticmethod
-    def show_all_reports():
+    def show_all_reports(model):
         try:
-            reports = PostReport.query.all()
+            reports = model.query.all()
             return reports
         except:
             return False
 
     @staticmethod
-    def show_all_not_considered_reports():
+    def show_all_not_considered_reports(model):
         try:
-            reports = PostReport.query.filter_by(settlement_id=1)
+
+            reports = model.query.filter_by(settlement_id=1)
             return reports
         except:
             return False
+
+
 
 
 class UserAdmin(AppUser):
@@ -356,16 +393,27 @@ class Post(db.Model, UserInteraction):
     creation_date = db.Column(db.DateTime, index=True)
     text = db.Column(db.String(3000), nullable=False)
     note = db.Column(db.Integer, default=0)
+    deleted = db.Column(db.Boolean, default=False)
+    deletion_cause = db.Column(db.String(100))
+    deletion_user = db.Column(db.Integer, db.ForeignKey("AppUser.id"))
 
     def __init__(self, creator_id, text, visit_id, note=0):
         super().__init__(text=text)
         self.creator_id = creator_id
         self.visit_id = visit_id
         self.note = note
+        self.can_delete = False
+
+    def can_delete(self, viewer_exp_level_id):
+        creator = AppUser.query.get(self.creator_id)
+        if viewer_exp_level_id > creator.experience_level_id:
+            self.can_delete = True
+        else:
+            self.can_delete = False
 
     def create_report(self, reporter_id, reason):
         try:
-            report = PostReport(reporter_id=reporter_id, reason=reason, post_id=self.id)
+            report = PostReport(reporter_id=reporter_id, reason=reason, interaction_id=self.id)
             db.session.add(report)
             db.session.commit()
             return report
@@ -378,6 +426,8 @@ class Post(db.Model, UserInteraction):
             comment = Comment(creator_id=user_id, post_id=self.id, text=text, note=note)
             db.session.add(comment)
             db.session.commit()
+            user = AppUser.query.get(self.creator_id)
+            user.add_experience(note)
             return comment
         except:
             db.session.rollback()
@@ -547,8 +597,29 @@ class Place(db.Model, ReportField):
 
     # TODO paginate
     @staticmethod
-    def get_all_places(self):
+    def get_all_places():
         return Place.query.order_by(Place.note.desc())
+
+    def add_visit(self, hotel_id, transport_id, name, start_date, end_date, user_id):
+        try:
+            visit = Visit(
+                place_id=self.id,
+                hotel_id=hotel_id,
+                transport_id=transport_id,
+                user_id=user_id,
+                name=name,
+                start_date=start_date,
+                end_date=end_date,
+            )
+            db.session.add(visit)
+            db.session.commit()
+            return visit
+        except:
+            db.session.rollback()
+            return False
+
+    def get_place_options(self):
+        pass
 
 
 class GeoInformation(db.Model):
@@ -719,19 +790,20 @@ class PostReport(db.Model, Report):
     moderator_id = db.Column(db.Integer, db.ForeignKey("Moderator.id"))
     settlement_id = db.Column(db.Integer, db.ForeignKey("Settlement.id"))
     reporter_id = db.Column(db.Integer, db.ForeignKey("AppUser.id"))
-    post_id = db.Column(db.Integer, db.ForeignKey("Post.id"))
+    interaction_id = db.Column(db.Integer, db.ForeignKey("Post.id"))
     reason = db.Column(db.String(200))
     creation_date = db.Column(db.Date, index=True)
     settlement_date = db.Column(db.Date, index=True)
 
+
     def __init__(
-        self, reporter_id, reason, post_id, settlement_id=1, moderator_id=None
+        self, reporter_id, reason, interaction_id, settlement_id=1, moderator_id=None
     ):
         super().__init__(
             reporter_id=reporter_id, reason=reason, settlement_id=settlement_id
         )
         self.moderator_id = moderator_id
-        self.post_id = post_id
+        self.interaction_id = interaction_id
         self.creation_date = datetime.date.today()
         self.settlement_date = None
 
@@ -743,19 +815,19 @@ class CommentReport(db.Model, Report):
     moderator_id = db.Column(db.Integer, db.ForeignKey("Moderator.id"))
     settlement_id = db.Column(db.Integer, db.ForeignKey("Settlement.id"))
     reporter_id = db.Column(db.Integer, db.ForeignKey("AppUser.id"))
-    comment_id = db.Column(db.Integer, db.ForeignKey("Comment.id"))
+    interaction_id = db.Column(db.Integer, db.ForeignKey("Comment.id"))
     reason = db.Column(db.String(200))
     creation_date = db.Column(db.Date, index=True)
     settlement_date = db.Column(db.Date, index=True)
 
     def __init__(
-        self, reporter_id, reason, comment_id, settlement_id=1, moderator_id=None
+        self, reporter_id, reason, interaction_id, settlement_id=1, moderator_id=None
     ):
         super().__init__(
             reporter_id=reporter_id, reason=reason, settlement_id=settlement_id
         )
         self.moderator_id = moderator_id
-        self.comment_id = comment_id
+        self.interaction_id = interaction_id
         self.creation_date = datetime.date.today()
         self.settlement_date = None
 

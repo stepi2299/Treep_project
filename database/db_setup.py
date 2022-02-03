@@ -11,7 +11,7 @@ class DbWorker:
         pass
 
     @staticmethod
-    def delete_singe_record(self, obj):
+    def delete_singe_record(obj):
         try:
             db.session.delete(obj)
             db.session.commit()
@@ -19,7 +19,7 @@ class DbWorker:
             db.session.rollback()
 
     @staticmethod
-    def delete_all_records_from_table(self, model):
+    def delete_all_records_from_table(model):
         try:
             model.query.delete()
             db.session.commit()
@@ -27,7 +27,7 @@ class DbWorker:
             db.session.rollback()
 
     @staticmethod
-    def add_into_db(self, obj):
+    def add_into_db(obj):
         try:
             if isinstance(obj, list):
                 db.session.add_all(obj)
@@ -424,21 +424,21 @@ def fill_with_mandatory_data():
     post_report1 = PostReport(
         reporter_id=user3.id,
         reason="Niedobry byl",
-        post_id=post1.id,
+        interaction_id=post1.id,
         settlement_id=settlement1.id,
         moderator_id=moderator1.id,
     )
     post_report2 = PostReport(
         reporter_id=user3.id,
         reason="Bardzo brzydki",
-        post_id=post2.id,
+        interaction_id=post2.id,
         settlement_id=settlement2.id,
         moderator_id=moderator1.id,
     )
     post_report3 = PostReport(
         reporter_id=user3.id,
         reason="Obrzydliwy",
-        post_id=post3.id,
+        interaction_id=post3.id,
         settlement_id=settlement3.id,
         moderator_id=moderator1.id,
     )
@@ -446,15 +446,15 @@ def fill_with_mandatory_data():
     db.session.commit()
 
     comment_report1 = CommentReport(
-        reporter_id=user3.id, reason="sad comment :(", comment_id=comment1.id,
+        reporter_id=user3.id, reason="sad comment :(", interaction_id=comment1.id,
     )
     comment_report2 = CommentReport(
-        reporter_id=user3.id, reason="sjdfgbsdngikfgdj", comment_id=comment2.id
+        reporter_id=user3.id, reason="sjdfgbsdngikfgdj", interaction_id=comment2.id
     )
     comment_report3 = CommentReport(
         reporter_id=user3.id,
         reason="obrazil mn i moja kolezanke dziad",
-        comment_id=comment3.id,
+        interaction_id=comment3.id,
         settlement_id=settlement3.id,
         moderator_id=moderator1.id,
     )
