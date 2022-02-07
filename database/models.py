@@ -448,7 +448,7 @@ class Post(db.Model, UserInteraction):
 
     @staticmethod
     def get_all_posts():
-        return Post.query.all()
+        return Post.query.order_by(Post.note.desc()).all()
 
 
 class Comment(db.Model, UserInteraction):

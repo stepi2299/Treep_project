@@ -82,11 +82,19 @@ def main():
                     'visit': visit.name})
 
 
-@flask_app.route("/postss", methods=['GET'])
-def postss():
+def serializer(posts):
+    return {
+        'post_desc': posts[0],
+        'username': posts[1],
+        'id': posts[2]
+    }
+
+
+@flask_app.route("/main_page", methods=['GET'])
+def main_page():
     posts = Post.get_all_posts()
-    text = posts[0].text
-    user = AppUser.query.get(posts[0].creator_id)
-    return jsonify({'text': text,
-                    'username': user.login,
-                    'post_id': posts[0].id})
+    serialized_posts = []
+    for post in posts:
+        user = AppUser.query.get(post.creator_id)
+        serialized_posts.append((post.text, user.login, post.id))
+    return jsonify([*map(serializer, serialized_posts)])
