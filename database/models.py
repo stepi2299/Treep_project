@@ -446,6 +446,10 @@ class Post(db.Model, UserInteraction):
     def get_visit(self):
         return Visit.query.filter_by(id=self.visit_id).one()
 
+    @staticmethod
+    def get_all_posts():
+        return Post.query.all()
+
 
 class Comment(db.Model, UserInteraction):
     __tablename__ = "Comment"

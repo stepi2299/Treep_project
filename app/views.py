@@ -1,5 +1,5 @@
 from app import flask_app
-from database.models import AppUser
+from database.models import AppUser, Post
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.urls import url_parse
 from flask_login import current_user, login_user, logout_user, login_required
@@ -80,3 +80,9 @@ def main():
     return jsonify({'post text': posts[0].text,
                     'comment': comments[0].text,
                     'visit': visit.name})
+
+@flask_app.route("/postss", methods=['GET'])
+def postss():
+    posts = Post.get_all_posts()
+    print(posts)
+    return "ell"
