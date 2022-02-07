@@ -81,8 +81,12 @@ def main():
                     'comment': comments[0].text,
                     'visit': visit.name})
 
+
 @flask_app.route("/postss", methods=['GET'])
 def postss():
     posts = Post.get_all_posts()
-    print(posts)
-    return "ell"
+    text = posts[0].text
+    user = AppUser.query.get(posts[0].creator_id)
+    return jsonify({'text': text,
+                    'username': user.login,
+                    'post_id': posts[0].id})
