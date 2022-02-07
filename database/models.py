@@ -884,6 +884,10 @@ class Country(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     country = db.Column(db.String(60), unique=True, nullable=False)
 
+    @staticmethod
+    def get_all_countries():
+        return Country.query.all()
+
 
 class ExperienceLevel(db.Model):
     __tablename__ = "ExperienceLevel"
