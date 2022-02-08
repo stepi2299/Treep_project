@@ -102,7 +102,7 @@ class AppUser(db.Model, ReportField, UserMixin):
 
     @staticmethod
     def validate_email(email):
-        user = AppUser.query.filter_by(email=email.data).first()
+        user = AppUser.query.filter_by(email=email).first()
         if user is not None:
             return False
         return True
