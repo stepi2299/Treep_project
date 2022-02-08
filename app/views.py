@@ -1,10 +1,9 @@
 import os
 from app import flask_app, db
 from database.models import AppUser, Post, Photo, PersonalInfo
-from flask import render_template, redirect, url_for, flash, request, jsonify
-from werkzeug.urls import url_parse
+from flask import request, jsonify
 from flask_login import current_user, login_user, logout_user, login_required
-from .forms import LoginForm, RegisterForm
+
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -38,6 +37,7 @@ def register():
     username = request.json["username"]
     email = request.json["email"]
     password = request.json["password"]
+    password1 = request.json["password1"]
     name = request.json.get("name", "Krystian")
     surname = request.json.get("surname", "Piotrowski")
     age = request.json.get("age", 22)
@@ -46,7 +46,7 @@ def register():
     sex_id = request.json.get("sex_id", 1)
     res_log = AppUser.validate_login(username)
     res_emil = AppUser.validate_email(email)
-    if res_emil and res_log:
+    if res_emil and res_log and password1 == password:
         try:
             personal_info = PersonalInfo(
                 city=city,
@@ -64,6 +64,7 @@ def register():
             user.set_password(password=password)
             db.session.add(user)
             db.session.commit()
+            login_user(user)
             return jsonify({"result": True})
         except:
             db.session.rollback()
