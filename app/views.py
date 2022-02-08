@@ -1,6 +1,6 @@
 import os
-from app import flask_app
-from database.models import AppUser, Post, Photo
+from app import flask_app, db
+from database.models import AppUser, Post, Photo, PersonalInfo
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.urls import url_parse
 from flask_login import current_user, login_user, logout_user, login_required
@@ -18,34 +18,64 @@ def index():
 @flask_app.route("/login", methods=["POST"], strict_slashes=False)
 def login():
     if current_user.is_authenticated:
-        return jsonify({'result': False})
-    username = request.json['username']
-    password = request.json['password']
+        return jsonify({"result": False})
+    username = request.json["username"]
+    password = request.json["password"]
 
-    user = AppUser.query.filter_by(username=username).first()
+    user = AppUser.query.filter_by(login=username).first()
     if user is None or not user.check_password(password):
-        return jsonify({'result': False})
+        return jsonify({"result": False})
     else:
         login_user(user)
-        return jsonify({'result': True})
+        return jsonify({"result": True})
 
 
 @flask_app.route("/register", methods=["POST"], strict_slashes=False)
 def register():
     if current_user.is_authenticated:
-        return jsonify({'result': False})
-    username = request.json['username']
-    email = request.json['email']
+        return jsonify({"result": False})
 
+    username = request.json["username"]
+    email = request.json["email"]
+    password = request.json["password"]
+    name = request.json.get("name", "Krystian")
+    surname = request.json.get("surname", "Piotrowski")
+    age = request.json.get("age", 22)
+    city = request.json.get("city", "Skierniewice")
+    country_id = request.json.get("country", 1)
+    sex_id = request.json.get("sex_id", 1)
     res_log = AppUser.validate_login(username)
     res_emil = AppUser.validate_email(email)
-    return jsonify({'result': True})
+    if res_emil and res_log:
+        try:
+            personal_info = PersonalInfo(
+                city=city,
+                country_id=country_id,
+                name=name,
+                surname=surname,
+                sex_id=sex_id,
+                age=age,
+            )
+            db.session.add(personal_info)
+            db.session.commit()
+            user = AppUser(
+                login=username, email=email, personal_info_id=personal_info.id
+            )
+            user.set_password(password=password)
+            db.session.add(user)
+            db.session.commit()
+            return jsonify({"result": True})
+        except:
+            db.session.rollback()
+            return jsonify({"result": False})
+    else:
+        return jsonify({"result": False})
 
 
 @flask_app.route("/logout")
 def logout():
     logout_user()
-    return jsonify({'result': True})
+    return jsonify({"result": False})
 
 
 @flask_app.route("/user/<user_id>", methods=["GET"])
@@ -70,39 +100,41 @@ def user(user_id):
     )
 
 
-@flask_app.route('/user/<user_id>/add_post', methods=['POST'])
+@flask_app.route("/user/<user_id>/add_post", methods=["POST"])
 def result():
     post = request.json
     if post:
-        result = current_user.add_post(text=post['text'], photo_path=post['photo_path'], visit_id=post['visit_id'])
+        result = current_user.add_post(
+            text=post["text"], photo_path=post["photo_path"], visit_id=post["visit_id"]
+        )
         return jsonify({"result": result})
     return "No player information is given"
 
 
-@flask_app.route("/main", methods=['GET'])
+@flask_app.route("/main", methods=["GET"])
 def main():
     usr = AppUser.query.get(1)
     posts = usr.followed_posts()
-    #posts = current_user.followed_posts() this will work after proper logging
+    # posts = current_user.followed_posts() this will work after proper logging
     first_post = posts[0]
     comments = first_post.show_all_post_comments()
     visit = first_post.get_visit()
-    return jsonify({'post text': posts[0].text,
-                    'comment': comments[0].text,
-                    'visit': visit.name})
+    return jsonify(
+        {"post text": posts[0].text, "comment": comments[0].text, "visit": visit.name}
+    )
 
 
 def serializer(posts):
     return {
-        'post_desc': posts[0],
-        'username': posts[1],
-        'id': posts[2],
-        'avatar_path': posts[3],
-        'photo_path': posts[4]
+        "post_desc": posts[0],
+        "username": posts[1],
+        "id": posts[2],
+        "avatar_path": posts[3],
+        "photo_path": posts[4],
     }
 
 
-@flask_app.route("/main_page", methods=['GET'])
+@flask_app.route("/main_page", methods=["GET"])
 def main_page():
     posts = Post.get_all_posts()
     serialized_posts = []
@@ -112,5 +144,7 @@ def main_page():
         avatar_path = os.path.join(base_path, avatar_path_rel)
         photo_path_rel = Photo.query.filter_by(post_id=post.id).one()
         photo_path = os.path.join(base_path, photo_path_rel.photo_path)
-        serialized_posts.append((post.text, user.login, post.id, avatar_path, photo_path))
+        serialized_posts.append(
+            (post.text, user.login, post.id, avatar_path, photo_path)
+        )
     return jsonify([*map(serializer, serialized_posts)])
