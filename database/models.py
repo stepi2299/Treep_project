@@ -89,6 +89,10 @@ class AppUser(db.Model, ReportField, UserMixin):
     def __repr__(self):
         return f"user: {self.login}"
 
+    def get_profile_photo(self):
+        photo = ProfilePhoto.query.get(self.profile_photo)
+        return photo.photo_path
+
     @staticmethod
     def validate_login(login):
         user = AppUser.query.filter_by(login=login).first()

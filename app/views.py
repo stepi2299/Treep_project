@@ -1,9 +1,12 @@
+import os
 from app import flask_app
-from database.models import AppUser, Post
+from database.models import AppUser, Post, Photo
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.urls import url_parse
 from flask_login import current_user, login_user, logout_user, login_required
 from .forms import LoginForm, RegisterForm
+
+base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 @flask_app.route("/")
@@ -86,7 +89,9 @@ def serializer(posts):
     return {
         'post_desc': posts[0],
         'username': posts[1],
-        'id': posts[2]
+        'id': posts[2],
+        'avatar_path': posts[3],
+        'photo_path': posts[4]
     }
 
 
@@ -96,5 +101,9 @@ def main_page():
     serialized_posts = []
     for post in posts:
         user = AppUser.query.get(post.creator_id)
-        serialized_posts.append((post.text, user.login, post.id))
+        avatar_path_rel = user.get_profile_photo()
+        avatar_path = os.path.join(base_path, avatar_path_rel)
+        photo_path_rel = Photo.query.filter_by(post_id=post.id).one()
+        photo_path = os.path.join(base_path, photo_path_rel.photo_path)
+        serialized_posts.append((post.text, user.login, post.id, avatar_path, photo_path))
     return jsonify([*map(serializer, serialized_posts)])
