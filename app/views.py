@@ -1,6 +1,6 @@
 import os
 from app import flask_app, db
-from database.models import AppUser, Post, Photo, PersonalInfo
+from database.models import AppUser, Post, Photo, PersonalInfo, Place
 from flask import request, jsonify
 from flask_login import current_user, login_user, logout_user, login_required
 
@@ -11,6 +11,10 @@ base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 @flask_app.route("/")
 @flask_app.route("/index")
 def index():
+    post = Post.query.get(1)
+    post.add_comment_and_rate(1, "elegancko i fajniutko, pozdrawiam", 1)
+    post.add_comment_and_rate(2, "bylo pite, fajna sprawa", 0)
+    post.add_comment_and_rate(3, "grzecznie i z kultura", 1)
     return jsonify({"result": True})
 
 
@@ -52,7 +56,7 @@ def register():
                 country_id=country_id,
                 name=name,
                 surname=surname,
-                sex_id=sex_id
+                sex_id=sex_id,
             )
             db.session.add(personal_info)
             db.session.commit()
@@ -130,6 +134,11 @@ def serializer(posts):
         "id": posts[2],
         "avatar_path": posts[3],
         "photo_path": posts[4],
+        "place": posts[5],
+        "start_date": posts[6],
+        "end_date": posts[7],
+        "visit_name": posts[8],
+        "comments": posts[9],
     }
 
 
@@ -143,8 +152,26 @@ def main_page():
         avatar_path = os.path.join(base_path, avatar_path_rel)
         photo_path_rel = Photo.query.filter_by(post_id=post.id).one()
         photo_path = os.path.join(base_path, photo_path_rel.photo_path)
+        visit = post.get_visit()
+        comments = post.show_all_post_comments()
+        post_comments = []
+        for comment in comments:
+            creator = AppUser.query.get(comment.creator_id)
+            post_comments.append({"username": creator.login, "comment": comment.text})
+        place = Place.query.get(visit.place_id)
         serialized_posts.append(
-            (post.text, user.login, post.id, avatar_path, photo_path)
+            (
+                post.text,
+                user.login,
+                post.id,
+                avatar_path,
+                photo_path,
+                place.name,
+                visit.start_date,
+                visit.end_date,
+                visit.name,
+                post_comments
+            )
         )
     return jsonify([*map(serializer, serialized_posts)])
 

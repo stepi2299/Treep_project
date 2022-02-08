@@ -769,11 +769,11 @@ class Visit(db.Model):
         try:
             post = Post(
                 text=text,
-                creation_date=datetime.date.today(),
                 creator_id=user_id,
                 visit_id=self.id,
             )
             db.session.add(post)
+            db.session.commit()
             db.session.commit()
             photo = Photo(photo_path=photo_path, post_id=post.id)
             db.session.add(post)
