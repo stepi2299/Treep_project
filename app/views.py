@@ -1,12 +1,13 @@
 import os
 from app import flask_app, db
 from database.models import AppUser, Post, Photo, PersonalInfo, Place
-from flask import request, jsonify
+from flask import request, jsonify, session
 from flask_login import current_user, login_user, logout_user, login_required
-from flask import g
 
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+global post_id
 
 
 @flask_app.route("/")
@@ -187,14 +188,15 @@ def is_logged():
 
 @flask_app.route("/get_post_id", methods=["POST"], strict_slashes=False)
 def get_post_id():
-    g.post_id = request.json['post_id']
+    session['post_id'] = request.json['post_id']
     return jsonify({'result': True})
 
 
 @flask_app.route("/post_site", methods=["GET"])
 def post_site():
-    post_id = g.post_id
+    post_id = session['post_id']
     print(post_id)
     post = Post.query.get(post_id)
     print(post)
+    # post_info = {''}
     return jsonify({'result': True})
