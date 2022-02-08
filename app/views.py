@@ -12,7 +12,7 @@ base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 @flask_app.route("/")
 @flask_app.route("/index")
 def index():
-    return "Hello World"
+    return jsonify({"result": True})
 
 
 @flask_app.route("/login", methods=["POST"], strict_slashes=False)
@@ -20,7 +20,7 @@ def login():
     if current_user.is_authenticated:
         return jsonify({'result': False})
     username = request.json['username']
-    password = request.json['body']
+    password = request.json['password']
 
     user = AppUser.query.filter_by(username=username).first()
     if user is None or not user.check_password(password):
@@ -30,10 +30,22 @@ def login():
         return jsonify({'result': True})
 
 
+@flask_app.route("/register", methods=["POST"], strict_slashes=False)
+def register():
+    if current_user.is_authenticated:
+        return jsonify({'result': False})
+    username = request.json['username']
+    email = request.json['email']
+
+    res_log = AppUser.validate_login(username)
+    res_emil = AppUser.validate_email(email)
+    return jsonify({'result': True})
+
+
 @flask_app.route("/logout")
 def logout():
     logout_user()
-    return redirect(url_for("index"))
+    return jsonify({'result': True})
 
 
 @flask_app.route("/user/<user_id>", methods=["GET"])
