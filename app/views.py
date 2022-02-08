@@ -148,3 +148,11 @@ def main_page():
             (post.text, user.login, post.id, avatar_path, photo_path)
         )
     return jsonify([*map(serializer, serialized_posts)])
+
+
+@flask_app.route("/is_logged", methods=["GET"])
+def is_logged():
+    if current_user.is_authenticated:
+        return jsonify({"result": True, "username": current_user.login})
+    else:
+        return jsonify({"result": False, "username": ""})
