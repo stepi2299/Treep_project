@@ -40,7 +40,6 @@ def register():
     password1 = request.json["password1"]
     name = request.json.get("name", "Krystian")
     surname = request.json.get("surname", "Piotrowski")
-    age = request.json.get("age", 22)
     city = request.json.get("city", "Skierniewice")
     country_id = request.json.get("country", 1)
     sex_id = request.json.get("sex_id", 1)
@@ -53,8 +52,7 @@ def register():
                 country_id=country_id,
                 name=name,
                 surname=surname,
-                sex_id=sex_id,
-                age=age,
+                sex_id=sex_id
             )
             db.session.add(personal_info)
             db.session.commit()
