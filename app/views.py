@@ -83,37 +83,59 @@ def logout():
     return jsonify({"result": False})
 
 
-@flask_app.route("/user/<user_id>", methods=["GET"])
-def user(user_id):
-    usr = AppUser.query.get(user_id)
-    usr_visits = usr.all_user_visits()
-    usr_posts = usr.show_user_posts()
-    usr_places = usr.visited_places()
+@flask_app.route("/user", methods=["POST"], strict_slashes=False)
+def user():
+    username = request.json["username"]
+    user = AppUser.query.filter_by(login=username).one()
+    info = user.get_personal_info()
+    country = info.get_user_country()
+    avatar_path_rel = user.get_profile_photo()
+    avatar_path = os.path.join(base_path, avatar_path_rel)
+    try:
+        if user.login == current_user.login:
+            ownership = True
+        else:
+            ownership = False
+    except:
+        ownership = False
+    user_visits = user.all_user_visits()
+    user_posts = user.show_user_posts()
+    user_places = user.visited_places()
+    user_information = {
+        "username": user.login,
+        "post_count": user_posts.count(),
+        "name": info.name,
+        "surname": info.surname,
+        "country": country.country,
+        "exp": user.experience,
+        "avatar_path": avatar_path,
+    }
     posts = []
     visits = []
-    for post in usr_posts:
+    for post in user_posts:
         posts.append(post)
-    for visit in usr_visits:
+    for visit in user_visits:
         visits.append(visit)
     return jsonify(
         {
-            "user": usr.login,
-            "visits": visits[0].name,
-            "posts": posts[0].text,
-            "places": usr_places,
+            "user": user_information,
+            "is_you": ownership,
+            "visits": "dontknow",
+            "posts": "dontknow",
+            "places": "usr_places",
         }
     )
 
 
-@flask_app.route("/user/<user_id>/add_post", methods=["POST"])
-def result():
-    post = request.json
-    if post:
-        result = current_user.add_post(
-            text=post["text"], photo_path=post["photo_path"], visit_id=post["visit_id"]
-        )
-        return jsonify({"result": result})
-    return "No player information is given"
+# @flask_app.route("/user/<user_id>/add_post", methods=["POST"])
+# def result():
+#     post = request.json
+#     if post:
+#         result = current_user.add_post(
+#             text=post["text"], photo_path=post["photo_path"], visit_id=post["visit_id"]
+#         )
+#         return jsonify({"result": result})
+#     return "No player information is given"
 
 
 @flask_app.route("/main", methods=["GET"])
@@ -172,7 +194,7 @@ def main_page():
                 visit.start_date,
                 visit.end_date,
                 visit.name,
-                post_comments
+                post_comments,
             )
         )
     return jsonify([*map(serializer, serialized_posts)])
@@ -188,7 +210,7 @@ def is_logged():
 
 @flask_app.route("/post_site", methods=["POST"], strict_slashes=False)
 def post_site():
-    post_id = request.json['post_id']
+    post_id = request.json["post_id"]
     post = Post.query.get(post_id)
     user = post.get_creator()
     photo = post.get_photo()
@@ -207,25 +229,27 @@ def post_site():
     for comment in comments:
         creator = comment.get_creator()
         post_comments.append({"username": creator.login, "comment": comment.text})
-    post_objects = {"username": user.login,
-                    "text": post.text,
-                    "photo_path": photo_path,
-                    "place_name": place.name,
-                    "visit_name": visit.name,
-                    "start_date": visit.start_date,
-                    "end_date": visit.end_date,
-                    "comments": post_comments,
-                    "your_post": ownership}
+    post_objects = {
+        "username": user.login,
+        "text": post.text,
+        "photo_path": photo_path,
+        "place_name": place.name,
+        "visit_name": visit.name,
+        "start_date": visit.start_date,
+        "end_date": visit.end_date,
+        "comments": post_comments,
+        "your_post": ownership,
+    }
     return jsonify(post_objects)
 
 
 @flask_app.route("/add_post", methods=["POST"], strict_slashes=False)
 def add_post():
-    text = request.json['text']
-    photo_path = request.json.get('photo_path', None)
-    visit_id = request.json.get('visit_id', 1)
+    text = request.json["text"]
+    photo_path = request.json.get("photo_path", None)
+    visit_id = request.json.get("visit_id", 1)
     result = current_user.add_post(text, photo_path, visit_id)
     if result:
-        return jsonify({'result': True})
+        return jsonify({"result": True})
     else:
-        return jsonify({'result': False})
+        return jsonify({"result": False})

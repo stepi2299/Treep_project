@@ -93,6 +93,9 @@ class AppUser(db.Model, ReportField, UserMixin):
         photo = ProfilePhoto.query.get(self.profile_photo)
         return photo.photo_path
 
+    def get_personal_info(self):
+        return PersonalInfo.query.get(self.personal_info_id)
+
     @staticmethod
     def validate_login(login):
         user = AppUser.query.filter_by(login=login).first()
@@ -249,6 +252,9 @@ class PersonalInfo(db.Model):
     name = db.Column(db.String(40), nullable=False)
     sex_id = db.Column(db.Integer, db.ForeignKey("Sex.id"))
     surname = db.Column(db.String(80))
+
+    def get_user_country(self):
+        return Country.query.get(self.country_id)
 
 
 class Moderator(AppUser, db.Model):
@@ -461,6 +467,7 @@ class Post(db.Model, UserInteraction):
         return Photo.query.filter_by(post_id=self.id).first()
 
 
+
 class Comment(db.Model, UserInteraction):
     __tablename__ = "Comment"
 
@@ -484,7 +491,7 @@ class Comment(db.Model, UserInteraction):
     def create_report(self, reporter_id, reason):
         try:
             report = CommentReport(
-                reporter_id=reporter_id, reason=reason, comment_id=self.id
+                reporter_id=reporter_id, reason=reason, interaction_id=self.id
             )
             db.session.add(report)
             db.session.commit()
@@ -495,6 +502,7 @@ class Comment(db.Model, UserInteraction):
 
     def get_creator(self):
         return AppUser.query.get(self.creator_id)
+
 
 class Place(db.Model, ReportField):
     __tablename__ = "Place"
