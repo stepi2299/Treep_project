@@ -348,7 +348,7 @@ class PlaceAdmin(AppUser):
             place = Place(name=name, admin_id=self.id)
             db.session.add(place)
             db.session.commit()
-            return place
+            return True
         except:
             db.session.rollback()
             return False
@@ -518,14 +518,15 @@ class Place(db.Model, ReportField):
     hotels = db.relationship("Hotel", backref="main_place", lazy="dynamic")
     communications = db.relationship("Transport", backref="main_place", lazy="dynamic")
 
-    def __init__(self, admin_id, name):
+    def __init__(self, admin_id, name, country_id, language, region):
         self.admin_id = admin_id
         self.name = name
         self.creation_date = datetime.date.today()
+        self.__add_geo_information(country_id, language, region)
         self.average_weather = None  # TODO think how show the weather
         # TODO how to create communication? create 3 objects of creators?
 
-    def add_geo_information(self, country_id, language, region):
+    def __add_geo_information(self, country_id, language, region):
         try:
             self.geo_information = GeoInformation(
                 country_id=country_id, language=language, region=region
@@ -555,7 +556,7 @@ class Place(db.Model, ReportField):
             photo = Photo(attraction_id=attraction.id, photo_path=photo_path)
             db.session.add(photo)
             db.session.commit()
-            return attraction, photo
+            return True
         except:
             db.session.rollback()
             return False

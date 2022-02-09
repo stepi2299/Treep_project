@@ -1,6 +1,6 @@
 import os
 from app import flask_app, db
-from database.models import AppUser, Post, Photo, PersonalInfo, Place
+from database.models import AppUser, Post, Photo, PersonalInfo, Place, PlaceAdmin
 from flask import request, jsonify, session
 from flask_login import current_user, login_user, logout_user, login_required
 
@@ -253,3 +253,105 @@ def add_post():
         return jsonify({"result": True})
     else:
         return jsonify({"result": False})
+
+
+@flask_app.route("/add_comment", methods=["POST"], strict_slashes=False)
+def add_comment():
+    post_id = request.json["post_id"]
+    text = request.json["text"]
+    note = request.json.get("note", 0)
+    post = Post.query.get(post_id)
+    result = post.add_comment_and_rate(current_user.id, text, note)
+    if result:
+        return jsonify({"result": True})
+    else:
+        return jsonify({"result": False})
+
+
+@flask_app.route("/add_visit", methods=["POST"], strict_slashes=False)
+def add_visit():
+    place_id = request.json.get("place_id")
+    hotel_id = request.json.get("hotel_id", None)
+    transport_id = request.json.get("transport_id", None)
+    name = request.json["name"]
+    start_date = request.json["start_date"]
+    end_date = request.json["end_date"]
+    result = current_user.add_visit(
+        place_id, hotel_id, transport_id, name, start_date, end_date
+    )
+    if result:
+        return jsonify({"result": True})
+    else:
+        return jsonify({"result": False})
+
+
+@flask_app.route("/add_place", methods=["POST"], strict_slashes=False)
+def add_place():
+    try:
+        name = request.json["name"]
+        country_id = request.json.get("country_id", 1)
+        language = request.json.get("language", "pl")
+        region = request.json.get("region", None)
+        admin = PlaceAdmin.query.get(current_user.id)
+        result = admin.add_place(name, country_id, language, region)
+        if result:
+            return jsonify({"result": True})
+        else:
+            return jsonify({"result": False})
+    except:
+        return jsonify({"result": False})
+
+
+@flask_app.route("/add_hotel", methods=["POST"], strict_slashes=False)
+def add_hotel():
+    place_id = request.json["place_id"]
+    name = request.json["name"]
+    country_id = request.json["country_id"]
+    city = request.json["city"]
+    street = request.json["street"]
+    nr_of_street = request.json["nr_of_street"]
+    nr_apartment = request.json.get("nr_apartment", None)
+    postcode = request.json.get("postcode", None)
+    google_maps_link = request.json.get("google_maps_link", None)
+    site_link = request.json.get("site_link", None)
+    place = Place.query.get(place_id)
+    result = place.add_hotel(
+        name,
+        country_id,
+        city,
+        street,
+        nr_of_street,
+        current_user.id,
+        nr_apartment,
+        postcode,
+        google_maps_link,
+        site_link,
+    )
+    if result:
+        return jsonify({"result": True})
+    else:
+        return jsonify({"result": False})
+
+
+@flask_app.route("/add_attraction", methods=["POST"], strict_slashes=False)
+def add_attraction():
+    place_id = request.json["place_id"]
+    name = request.json["name"]
+    description = request.json["description"]
+    photo_path = request.json["photo_path"]
+    google_maps = request.json.get("google_maps", None)
+    site_link = request.json.get("site_link", None)
+    place = Place.query.get(place_id)
+    result = place.add_attraction(
+        name,
+        description,
+        photo_path,
+        current_user.id,
+        google_maps,
+        site_link,
+    )
+    if result:
+        return jsonify({"result": True})
+    else:
+        return jsonify({"result": False})
+

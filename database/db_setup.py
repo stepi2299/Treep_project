@@ -184,18 +184,10 @@ def fill_with_mandatory_data():
     db.session.add(place_admin1)
     db.session.commit()
 
-    place1 = Place(name="Barcelona", admin_id=place_admin1.id)
-    place2 = Place(name="Paris", admin_id=place_admin1.id)
-    place3 = Place(name="Warszawa", admin_id=place_admin1.id)
-    place1.add_geo_information(
-        country_id=country1.id, language="Spanish, Catalan", region="Catalonia"
-    )
-    place2.add_geo_information(
-        country_id=country2.id, language="French", region="Ile-de-France"
-    )
-    place3.add_geo_information(
-        country_id=country3.id, language="Polish", region="Mazowieckie"
-    )
+    place1 = Place(name="Barcelona", admin_id=place_admin1.id, country_id=country1.id, language="Spanish, Catalan", region="Catalonia")
+    place2 = Place(name="Paris", admin_id=place_admin1.id, country_id=country2.id, language="French", region="Ile-de-France")
+    place3 = Place(name="Warszawa", admin_id=place_admin1.id, country_id=country3.id, language="Polish", region="Mazowieckie")
+
     db.session.add_all([place1, place2, place3])
     db.session.commit()
 
