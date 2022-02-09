@@ -454,6 +454,12 @@ class Post(db.Model, UserInteraction):
     def get_all_posts():
         return Post.query.order_by(Post.note.desc()).all()
 
+    def get_creator(self):
+        return AppUser.query.get(self.creator_id)
+
+    def get_photo(self):
+        return Photo.query.filter_by(post_id=self.id).first()
+
 
 class Comment(db.Model, UserInteraction):
     __tablename__ = "Comment"
@@ -487,6 +493,8 @@ class Comment(db.Model, UserInteraction):
             db.session.rollback()
             return False
 
+    def get_creator(self):
+        return AppUser.query.get(self.creator_id)
 
 class Place(db.Model, ReportField):
     __tablename__ = "Place"
@@ -782,6 +790,9 @@ class Visit(db.Model):
         except:
             db.session.rollback()
             return False
+
+    def get_place(self):
+        return Place.query.get(self.place_id)
 
 
 class Settlement(db.Model):

@@ -158,7 +158,7 @@ def main_page():
         comments = post.show_all_post_comments()
         post_comments = []
         for comment in comments:
-            creator = AppUser.query.get(comment.creator_id)
+            creator = comment.get_creator()
             post_comments.append({"username": creator.login, "comment": comment.text})
         place = Place.query.get(visit.place_id)
         serialized_posts.append(
@@ -186,17 +186,46 @@ def is_logged():
         return jsonify({"result": False, "username": ""})
 
 
-@flask_app.route("/get_post_id", methods=["POST"], strict_slashes=False)
-def get_post_id():
-    session['post_id'] = request.json['post_id']
-    return jsonify({'result': True})
-
-
-@flask_app.route("/post_site", methods=["GET"])
+@flask_app.route("/post_site", methods=["POST"], strict_slashes=False)
 def post_site():
-    post_id = session['post_id']
-    print(post_id)
+    post_id = request.json['post_id']
     post = Post.query.get(post_id)
-    print(post)
-    # post_info = {''}
-    return jsonify({'result': True})
+    user = post.get_creator()
+    photo = post.get_photo()
+    visit = post.get_visit()
+    place = visit.get_place()
+    comments = post.show_all_post_comments()
+    post_comments = []
+    photo_path = os.path.join(base_path, photo.photo_path)
+    try:
+        if user.login == current_user.login:
+            ownership = True
+        else:
+            ownership = False
+    except:
+        ownership = False
+    for comment in comments:
+        creator = comment.get_creator()
+        post_comments.append({"username": creator.login, "comment": comment.text})
+    post_objects = {"username": user.login,
+                    "text": post.text,
+                    "photo_path": photo_path,
+                    "place_name": place.name,
+                    "visit_name": visit.name,
+                    "start_date": visit.start_date,
+                    "end_date": visit.end_date,
+                    "comments": post_comments,
+                    "your_post": ownership}
+    return jsonify(post_objects)
+
+
+@flask_app.route("/add_post", methods=["POST"], strict_slashes=False)
+def add_post():
+    text = request.json['text']
+    photo_path = request.json.get('photo_path', None)
+    visit_id = request.json.get('visit_id', 1)
+    result = current_user.add_post(text, photo_path, visit_id)
+    if result:
+        return jsonify({'result': True})
+    else:
+        return jsonify({'result': False})
