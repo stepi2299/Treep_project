@@ -698,6 +698,10 @@ class Attraction(db.Model):
     def add_photo(self):
         pass
 
+    @staticmethod
+    def get_all_attractions():
+        return Attraction.query.all()
+
 
 class Photo(db.Model):
     __tablename__ = "Photo"
@@ -757,6 +761,10 @@ class Hotel(db.Model):
     note = db.Column(db.Integer, default=0)
     site_link = db.Column(db.String(500))
     admin_id = db.Column(db.Integer, db.ForeignKey("PlaceAdmin.id"), nullable=False)
+
+    @staticmethod
+    def get_all_hotels():
+        return Hotel.query.all()
 
 
 class Transport(db.Model):

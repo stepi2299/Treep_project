@@ -1,6 +1,6 @@
 import os
 from app import flask_app, db
-from database.models import AppUser, Post, Photo, PersonalInfo, Place, PlaceAdmin
+from database.models import AppUser, Post, Photo, PersonalInfo, Place, PlaceAdmin, Attraction, Hotel
 from flask import request, jsonify, session
 from flask_login import current_user, login_user, logout_user, login_required
 
@@ -378,5 +378,25 @@ def get_places():
     places = Place.get_all_places()
     for place in places:
         places_list.append({"id": place.id,
-                            "place": place.name})
+                            "name": place.name})
     return jsonify(places_list)
+
+
+@flask_app.route("/get_attractions", methods=["GET"])
+def get_attractions():
+    attraction_list = []
+    attractions = Attraction.get_all_attractions()
+    for attraction in attractions:
+        attraction_list.append({"id": attraction.id,
+                                "name": attraction.name})
+    return jsonify(attraction_list)
+
+
+@flask_app.route("/get_hotels", methods=["GET"])
+def get_hotels():
+    hotels_list = []
+    hotels = Hotel.get_all_hotels()
+    for hotel in hotels:
+        hotels_list.append({"id": hotel.id,
+                            "name": hotel.name})
+    return jsonify(hotels_list)
