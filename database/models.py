@@ -637,10 +637,9 @@ class Place(db.Model, ReportField):
             db.session.rollback()
             return False
 
-    # TODO paginate
     @staticmethod
     def get_all_places():
-        return Place.query.order_by(Place.note.desc())
+        return Place.query.all()
 
     def add_visit(self, hotel_id, transport_id, name, start_date, end_date, user_id):
         try:

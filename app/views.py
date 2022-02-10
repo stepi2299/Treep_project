@@ -256,7 +256,7 @@ def post_site():
 def add_post():
     text = request.json["text"]
     photo_path = request.json.get("photo_path", None)
-    visit_id = request.json.get("visit_id", 1)
+    visit_id = request.json.get("visit_id")
     result = current_user.add_post(text, photo_path, visit_id)
     if result:
         return jsonify({"result": True})
@@ -370,3 +370,13 @@ def get_visits():
         visits_list.append({"id": visit.id,
                             "visit": visit.name})
     return jsonify(visits_list)
+
+
+@flask_app.route("/get_places", methods=["GET"])
+def get_places():
+    places_list = []
+    places = Place.get_all_places()
+    for place in places:
+        places_list.append({"id": place.id,
+                            "place": place.name})
+    return jsonify(places_list)
