@@ -358,3 +358,15 @@ def add_attraction():
         return jsonify({"result": True})
     else:
         return jsonify({"result": False})
+
+
+@flask_app.route("/get_visits", methods=["POST"], strict_slashes=False)
+def get_visits():
+    username = request.json["username"]
+    user = AppUser.query.filter_by(login=username).first()
+    visits_list = []
+    visits = user.all_user_visits()
+    for visit in visits:
+        visits_list.append({"id": visit.id,
+                            "visit": visit.name})
+    return jsonify(visits_list)

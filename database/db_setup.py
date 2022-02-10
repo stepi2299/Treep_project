@@ -341,6 +341,15 @@ def fill_with_mandatory_data():
         start_date=datetime.date(2014, 6, 5),
         end_date=datetime.date(2014, 6, 12),
     )
+    visit11 = Visit(
+        place_id=place1.id,
+        hotel_id=hotel1.id,
+        transport_id=transport1.id,
+        user_id=user1.id,
+        name="Wycieczka do hyszpanii z twoim tym w 2013",
+        start_date=datetime.date(2013, 6, 5),
+        end_date=datetime.date(2013, 6, 12),
+    )
     attraction1 = Attraction.query.get(1)
     visit1.attractions.append(attraction1)
     visit2 = Visit(
@@ -365,7 +374,7 @@ def fill_with_mandatory_data():
     )
     attraction3 = Attraction.query.get(3)
     visit3.attractions.append(attraction3)
-    db.session.add_all([visit1, visit2, visit3])
+    db.session.add_all([visit1, visit2, visit3, visit11])
     db.session.commit()
 
     post1 = Post(
