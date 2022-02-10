@@ -111,7 +111,7 @@ def user():
         "exp": user.experience,
         "avatar_path": avatar_path,
         "exp_level": exp_level,
-        "upper_bound": high_boundry
+        "upper_bound": high_boundry,
     }
     posts = []
     visits = []
@@ -128,17 +128,6 @@ def user():
             "places": "usr_places",
         }
     )
-
-
-# @flask_app.route("/user/<user_id>/add_post", methods=["POST"])
-# def result():
-#     post = request.json
-#     if post:
-#         result = current_user.add_post(
-#             text=post["text"], photo_path=post["photo_path"], visit_id=post["visit_id"]
-#         )
-#         return jsonify({"result": result})
-#     return "No player information is given"
 
 
 @flask_app.route("/main", methods=["GET"])
@@ -206,9 +195,26 @@ def main_page():
 @flask_app.route("/is_logged", methods=["GET"])
 def is_logged():
     if current_user.is_authenticated:
-        return jsonify({"result": True, "username": current_user.login})
+        exp_level, high_bound = current_user.get_exp_level()
+        return jsonify(
+            {
+                "result": True,
+                "username": current_user.login,
+                "exp": current_user.experience,
+                "exp_level": exp_level,
+                "upper_bound": high_bound,
+            }
+        )
     else:
-        return jsonify({"result": False, "username": ""})
+        return jsonify(
+            {
+                "result": False,
+                "username": "",
+                "exp": 0,
+                "exp_level": [False, False, False],
+                "upper_bound": 0,
+            }
+        )
 
 
 @flask_app.route("/post_site", methods=["POST"], strict_slashes=False)
@@ -346,15 +352,9 @@ def add_attraction():
     site_link = request.json.get("site_link", None)
     place = Place.query.get(place_id)
     result = place.add_attraction(
-        name,
-        description,
-        photo_path,
-        current_user.id,
-        google_maps,
-        site_link,
+        name, description, photo_path, current_user.id, google_maps, site_link,
     )
     if result:
         return jsonify({"result": True})
     else:
         return jsonify({"result": False})
-
