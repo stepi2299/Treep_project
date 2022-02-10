@@ -282,11 +282,12 @@ def add_visit():
     place_id = request.json.get("place_id")
     hotel_id = request.json.get("hotel_id", None)
     transport_id = request.json.get("transport_id", None)
+    attraction_id = request.json.get("attraction_id", None)
     name = request.json["name"]
     start_date = request.json["start_date"]
     end_date = request.json["end_date"]
     result = current_user.add_visit(
-        place_id, hotel_id, transport_id, name, start_date, end_date
+        place_id, hotel_id, transport_id, name, start_date, end_date, attraction_id
     )
     if result:
         return jsonify({"result": True})

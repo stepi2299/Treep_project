@@ -190,8 +190,9 @@ class AppUser(db.Model, ReportField, UserMixin):
         else:
             self.experience_level_id = 3
 
-    def add_visit(self, place_id, hotel_id, transport_id, name, start_date, end_date):
+    def add_visit(self, place_id, hotel_id, transport_id, name, start_date, end_date, attraction_id):
         try:
+            attraction = Attraction.query.get(attraction_id)
             visit = Visit(
                 place_id=place_id,
                 hotel_id=hotel_id,
@@ -201,6 +202,7 @@ class AppUser(db.Model, ReportField, UserMixin):
                 start_date=start_date,
                 end_date=end_date,
             )
+            visit.attractions.append(attraction)
             db.session.add(visit)
             db.session.commit()
             return visit
