@@ -83,10 +83,12 @@ def logout():
     return jsonify({"result": False})
 
 
-@flask_app.route("/user", methods=["POST"], strict_slashes=False)
+@flask_app.route("/user", methods=["GET"], strict_slashes=False)
 def user():
-    username = request.json["username"]
+    #username = request.json["username"]
+    username = "moderatorek"
     user = AppUser.query.filter_by(login=username).one()
+    exp_level = user.get_exp_level()
     info = user.get_personal_info()
     country = info.get_user_country()
     avatar_path_rel = user.get_profile_photo()
@@ -109,6 +111,7 @@ def user():
         "country": country.country,
         "exp": user.experience,
         "avatar_path": avatar_path,
+        "exp_level": exp_level
     }
     posts = []
     visits = []

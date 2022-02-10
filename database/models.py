@@ -96,6 +96,14 @@ class AppUser(db.Model, ReportField, UserMixin):
     def get_personal_info(self):
         return PersonalInfo.query.get(self.personal_info_id)
 
+    def get_exp_level(self):
+        if self.experience_level_id == 1:
+            return [True, False, False]
+        elif self.experience_level_id == 2:
+            return [True, True, False]
+        else:
+            return [True, True, True]
+
     @staticmethod
     def validate_login(login):
         user = AppUser.query.filter_by(login=login).first()
