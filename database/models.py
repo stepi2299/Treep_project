@@ -456,7 +456,9 @@ class Post(db.Model, UserInteraction):
             db.session.commit()
             user = AppUser.query.get(self.creator_id)
             user.add_experience(note)
-            return comment
+            db.session.add(user)
+            db.session.commit()
+            return True
         except:
             db.session.rollback()
             return False

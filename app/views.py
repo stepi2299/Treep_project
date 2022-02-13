@@ -291,10 +291,10 @@ def post_site():
 @flask_app.route("/add_post", methods=["POST"], strict_slashes=False)
 def add_post():
     text = request.json["text"]
-    photo_path = request.json.get("photo_path", None)
+    photo_path_name = request.json.get("photo_path", None)
+    photo_path = os.path.join("app", "static", "img", photo_path_name)
     visit_id = request.json.get("visit_id")
     result = current_user.add_post(text, photo_path, visit_id)
-    print(photo_path)
     if result:
         return jsonify({"result": True})
     else:
@@ -307,9 +307,7 @@ def add_comment():
     text = request.json["text"]
     note = request.json.get("note", 0)
     post = Post.query.get(post_id)
-    print(note)
     result = post.add_comment_and_rate(current_user.id, text, int(note["name"]))
-    print(result)
     if result:
         return jsonify({"result": True})
     else:
@@ -446,25 +444,36 @@ def get_hotels():
 def edit_profile():
     try:
         username = request.json["username"]
-        avatar_name = request.json.get("profile_path", None)
+        avatar_name = request.json.get("photo_path", None)
         user = AppUser.query.filter_by(login=username).first()
         personal_info = PersonalInfo.query.get(user.personal_info_id)
         name = request.json.get("name", personal_info.name)
+        if not name:
+            name = personal_info.name
         surname = request.json.get("surname", personal_info.surname)
+        if not surname:
+            surname = personal_info.surname
         city = request.json.get("city", personal_info.city)
         country_id = request.json.get("country", personal_info.country_id)
         sex_id = request.json.get("sex_id", personal_info.sex_id)
         personal_info.edit_personal_info(name, surname, city, country_id, sex_id)
         db.session.add(personal_info)
         db.session.commit()
+        print(avatar_name)
         if avatar_name:
+            print(1)
             avatar_path = os.path.join("app", "static", "profile", avatar_name)
+            print(avatar_path)
             profile_photo = ProfilePhoto(photo_path=avatar_path)
+            print("dad")
             db.session.add(profile_photo)
             db.session.commit()
+            print(user.profile_photo)
             user.add_profile_photo(profile_photo.id)
+            print(user.profile_photo)
             db.session.add(user)
             db.session.commit()
+            print(avatar_path)
         return jsonify({"result": True})
     except:
         db.session.rollback()
