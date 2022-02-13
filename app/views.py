@@ -1,6 +1,6 @@
 import os
 from app import flask_app, db
-from database.models import AppUser, Post, Photo, PersonalInfo, Place, PlaceAdmin, Attraction, Hotel
+from database.models import AppUser, Post, Photo, PersonalInfo, Place, PlaceAdmin, Attraction, Hotel, ProfilePhoto
 from flask import request, jsonify, session, send_file, redirect, url_for
 from flask_login import current_user, login_user, logout_user, login_required
 
@@ -446,6 +446,7 @@ def get_hotels():
 def edit_profile():
     try:
         username = request.json["username"]
+        avatar_name = request.json.get("profile_path", None)
         user = AppUser.query.filter_by(login=username).first()
         personal_info = PersonalInfo.query.get(user.personal_info_id)
         name = request.json.get("name", personal_info.name)
@@ -456,6 +457,14 @@ def edit_profile():
         personal_info.edit_personal_info(name, surname, city, country_id, sex_id)
         db.session.add(personal_info)
         db.session.commit()
+        if avatar_name:
+            avatar_path = os.path.join("app", "static", "profile", avatar_name)
+            profile_photo = ProfilePhoto(photo_path=avatar_path)
+            db.session.add(profile_photo)
+            db.session.commit()
+            user.add_profile_photo(profile_photo.id)
+            db.session.add(user)
+            db.session.commit()
         return jsonify({"result": True})
     except:
         db.session.rollback()

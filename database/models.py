@@ -89,6 +89,9 @@ class AppUser(db.Model, ReportField, UserMixin):
     def __repr__(self):
         return f"user: {self.login}"
 
+    def add_profile_photo(self, profile_photo_id):
+        self.profile_photo = profile_photo_id
+
     def get_profile_photo(self):
         photo = ProfilePhoto.query.get(self.profile_photo)
         return photo.photo_path
