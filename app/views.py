@@ -1,7 +1,7 @@
 import os
 from app import flask_app, db
 from database.models import AppUser, Post, Photo, PersonalInfo, Place, PlaceAdmin, Attraction, Hotel
-from flask import request, jsonify, session
+from flask import request, jsonify, session, send_file, redirect, url_for
 from flask_login import current_user, login_user, logout_user, login_required
 
 
@@ -29,10 +29,23 @@ def login():
 
     user = AppUser.query.filter_by(login=username).first()
     if user is None or not user.check_password(password):
-        return jsonify({"result": False})
+        return jsonify({"result": False,
+                        "exp": 0,
+                        "upper_bound": 0,
+                        "star1": False,
+                        "star2": False,
+                        "star3": False
+                        })
     else:
         login_user(user)
-        return jsonify({"result": True})
+        exp_level, high_bound = current_user.get_exp_level()
+        return jsonify({"result": True,
+                        "exp": current_user.experience,
+                        "upper_bound": high_bound,
+                        "star1": exp_level[0],
+                        "star2": exp_level[1],
+                        "star3": exp_level[2]
+                        })
 
 
 @flask_app.route("/register", methods=["POST"], strict_slashes=False)
@@ -88,10 +101,11 @@ def user():
     username = request.json["username"]
     user = AppUser.query.filter_by(login=username).one()
     exp_level, high_boundry = user.get_exp_level()
+    avatar_path_rel = user.get_profile_photo()
+    abc_path = "http://127.0.0.1:8000/"
+    avatar_path = os.path.join(abc_path, avatar_path_rel)
     info = user.get_personal_info()
     country = info.get_user_country()
-    avatar_path_rel = user.get_profile_photo()
-    avatar_path = os.path.join(base_path, avatar_path_rel)
     try:
         if user.login == current_user.login:
             ownership = True
@@ -102,17 +116,6 @@ def user():
     user_visits = user.all_user_visits()
     user_posts = user.show_user_posts()
     user_places = user.visited_places()
-    user_information = {
-        "username": user.login,
-        "post_count": user_posts.count(),
-        "name": info.name,
-        "surname": info.surname,
-        "country": country.country,
-        "exp": user.experience,
-        "avatar_path": avatar_path,
-        "exp_level": exp_level,
-        "upper_bound": high_boundry,
-    }
     posts = []
     visits = []
     for post in user_posts:
@@ -121,7 +124,17 @@ def user():
         visits.append(visit)
     return jsonify(
         {
-            "user": user_information,
+            "username": user.login,
+            "post_count": user_posts.count(),
+            "name": info.name,
+            "surname": info.surname,
+            "country": country.country,
+            "exp": user.experience,
+            "avatar_path": avatar_path,
+            "star1": exp_level[0],
+            "star2": exp_level[1],
+            "star3": exp_level[2],
+            "upper_bound": high_boundry,
             "is_you": ownership,
             "visits": "dontknow",
             "posts": "dontknow",
@@ -165,9 +178,10 @@ def main_page():
     for post in posts:
         user = AppUser.query.get(post.creator_id)
         avatar_path_rel = user.get_profile_photo()
-        avatar_path = os.path.join(base_path, avatar_path_rel)
+        abc_path = "http://127.0.0.1:8000/"
+        avatar_path = os.path.join(abc_path, avatar_path_rel)
         photo_path_rel = Photo.query.filter_by(post_id=post.id).one()
-        photo_path = os.path.join(base_path, photo_path_rel.photo_path)
+        photo_path = os.path.join(abc_path, photo_path_rel.photo_path)
         visit = post.get_visit()
         comments = post.show_all_post_comments()
         post_comments = []
@@ -191,18 +205,32 @@ def main_page():
         )
     return jsonify([*map(serializer, serialized_posts)])
 
+@flask_app.route("/photo_post", methods=["POST"])
+def photo():
+    photo_path = request.json["photo_path"]
+    print(send_file(photo_path))
+    return send_file(photo_path)
+
+
 
 @flask_app.route("/is_logged", methods=["GET"])
 def is_logged():
     if current_user.is_authenticated:
         exp_level, high_bound = current_user.get_exp_level()
+        abc_path = "http://127.0.0.1:8000/"
+        user = current_user
+        avatar_path_rel = user.get_profile_photo()
+        avatar_path = os.path.join(abc_path, avatar_path_rel)
         return jsonify(
             {
                 "result": True,
                 "username": current_user.login,
                 "exp": current_user.experience,
-                "exp_level": exp_level,
                 "upper_bound": high_bound,
+                "star1": exp_level[0],
+                "star2": exp_level[1],
+                "star3": exp_level[2],
+                "avatar_path": avatar_path
             }
         )
     else:
@@ -211,8 +239,10 @@ def is_logged():
                 "result": False,
                 "username": "",
                 "exp": 0,
-                "exp_level": [False, False, False],
                 "upper_bound": 0,
+                "star1": False,
+                "star2": False,
+                "star3": False
             }
         )
 
@@ -225,9 +255,14 @@ def post_site():
     photo = post.get_photo()
     visit = post.get_visit()
     place = visit.get_place()
+    abc_path = "http://127.0.0.1:8000/"
+    user = AppUser.query.get(post.creator_id)
+    avatar_path_rel = user.get_profile_photo()
+    avatar_path = os.path.join(abc_path, avatar_path_rel)
     comments = post.show_all_post_comments()
     post_comments = []
-    photo_path = os.path.join(base_path, photo.photo_path)
+    abc_path = "http://127.0.0.1:8000/"
+    photo_path = os.path.join(abc_path, photo.photo_path)
     try:
         if user.login == current_user.login:
             ownership = True
@@ -241,6 +276,7 @@ def post_site():
     post_objects = {
         "username": user.login,
         "text": post.text,
+        "avatar_path": avatar_path,
         "photo_path": photo_path,
         "place_name": place.name,
         "visit_name": visit.name,
@@ -258,6 +294,7 @@ def add_post():
     photo_path = request.json.get("photo_path", None)
     visit_id = request.json.get("visit_id")
     result = current_user.add_post(text, photo_path, visit_id)
+    print(photo_path)
     if result:
         return jsonify({"result": True})
     else:
@@ -270,7 +307,9 @@ def add_comment():
     text = request.json["text"]
     note = request.json.get("note", 0)
     post = Post.query.get(post_id)
-    result = post.add_comment_and_rate(current_user.id, text, note)
+    print(note)
+    result = post.add_comment_and_rate(current_user.id, text, int(note["name"]))
+    print(result)
     if result:
         return jsonify({"result": True})
     else:

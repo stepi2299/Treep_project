@@ -98,20 +98,11 @@ class AppUser(db.Model, ReportField, UserMixin):
 
     def get_exp_level(self):
         if self.experience_level_id == 1:
-            return {"1_star": True,
-                    "2_star": False,
-                    "3_star": False
-                    }, 100
+            return [True, False, False], 100
         elif self.experience_level_id == 2:
-            return {"1_star": True,
-                    "2_star": True,
-                    "3_star": False
-                    }, 200
+            return [True, True, False], 200
         else:
-            return {"1_star": True,
-                    "2_star": True,
-                    "3_star": True
-                    }, "max"
+            return [True, True, True], "max"
 
     @staticmethod
     def validate_login(login):
