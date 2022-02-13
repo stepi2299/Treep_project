@@ -440,3 +440,39 @@ def get_hotels():
         hotels_list.append({"id": hotel.id,
                             "name": hotel.name})
     return jsonify(hotels_list)
+
+
+@flask_app.route("/edit_profile", methods=["POST"], strict_slashes=False)
+def edit_profile():
+    try:
+        username = request.json["username"]
+        user = AppUser.query.filter_by(login=username).first()
+        personal_info = PersonalInfo.query.get(user.personal_info_id)
+        name = request.json.get("name", personal_info.name)
+        surname = request.json.get("surname", personal_info.surname)
+        city = request.json.get("city", personal_info.city)
+        country_id = request.json.get("country", personal_info.country_id)
+        sex_id = request.json.get("sex_id", personal_info.sex_id)
+        personal_info.edit_personal_info(name, surname, city, country_id, sex_id)
+        db.session.add(personal_info)
+        db.session.commit()
+        return jsonify({"result": True})
+    except:
+        db.session.rollback()
+        return jsonify({"result": False})
+
+
+@flask_app.route("/edit_post", methods=["POST"], strict_slashes=False)
+def edit_post():
+    try:
+        post_id = request.json["post_id"]
+        post = Post.query.get(post_id)
+        text = request.json.get("text", post.text)
+        visit_id = request.json.get("visit_id", post.visit_id)
+        post.edit_post(text=text, visit_id=visit_id)
+        db.session.add(post)
+        db.session.commit()
+        return jsonify({"result": True})
+    except:
+        db.session.rollback()
+        return jsonify({"result": False})

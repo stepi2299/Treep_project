@@ -149,6 +149,7 @@ class AppUser(db.Model, ReportField, UserMixin):
             db.session.rollback()
             return False
 
+
     def hide_interaction(self, post_id, deletion_cause):
         try:
             post = Post.query.get(post_id)
@@ -266,6 +267,13 @@ class PersonalInfo(db.Model):
     def get_user_country(self):
         return Country.query.get(self.country_id)
 
+    def edit_personal_info(self, name, surname, city, country_id, sex_id):
+        self.name = name
+        self.surname = surname
+        self.city = city
+        self.country_id = country_id
+        self.sex_id = sex_id
+
 
 class Moderator(AppUser, db.Model):
     __tablename__ = "Moderator"
@@ -317,13 +325,10 @@ class Moderator(AppUser, db.Model):
     @staticmethod
     def show_all_not_considered_reports(model):
         try:
-
             reports = model.query.filter_by(settlement_id=1)
             return reports
         except:
             return False
-
-
 
 
 class UserAdmin(AppUser):
@@ -475,6 +480,10 @@ class Post(db.Model, UserInteraction):
 
     def get_photo(self):
         return Photo.query.filter_by(post_id=self.id).first()
+
+    def edit_post(self, text, visit_id):
+        self.text = text
+        self.visit_id = visit_id
 
 
 
